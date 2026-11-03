@@ -135,13 +135,23 @@ pub fn bind(port: u16) -> Result<Server, String> {
     Server::http(("127.0.0.1", port)).map_err(|e| e.to_string())
 }
 
-/// Another Qivora Download Manager is already running on this port: ask it to show itself.
-pub fn notify_existing(port: u16) -> bool {
+/// Another Qivora Download Manager is already running on this port: ask it to show itself or open target.
+pub fn notify_existing(port: u16, target: Option<&str>) -> bool {
     let Ok(mut s) = TcpStream::connect_timeout(&([127, 0, 0, 1], port).into(), Duration::from_millis(800)) else {
         return false;
     };
     let _ = s.set_read_timeout(Some(Duration::from_secs(2)));
-    let req = "POST /show HTTP/1.1\r\nHost: 127.0.0.1\r\nX-Qivora: 1\r\nX-SwiftGet: 1\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+    let (path, body) = match target {
+        Some(t) if !t.trim().is_empty() => {
+            let b = serde_json::json!({ "url": t.trim() }).to_string();
+            ("/add", b)
+        }
+        _ => ("/show", String::new()),
+    };
+    let req = format!(
+        "POST {path} HTTP/1.1\r\nHost: 127.0.0.1\r\nX-Qivora: 1\r\nX-SwiftGet: 1\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    );
     if s.write_all(req.as_bytes()).is_err() {
         return false;
     }
@@ -285,7 +295,7 @@ fn handle(mut req: Request, config: &impl Fn() -> String, on_event: &impl Fn(Api
             }
             match serde_json::from_str::<AddRequest>(&body) {
                 Ok(add)
-                    if (is_http(&add.url) || swiftget_engine::torrent::is_magnet(&add.url))
+                    if (is_http(&add.url) || swiftget_engine::torrent::is_torrent_source(&add.url))
                         && add.audio_url.as_deref().map(is_http).unwrap_or(true) =>
                 {
                     on_event(ApiEvent::Add(add));

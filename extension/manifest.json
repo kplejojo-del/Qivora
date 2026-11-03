@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Qivora Download Manager",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Qivora Download Manager browser integration.",
   "permissions": [
     "downloads",

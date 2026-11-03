@@ -228,7 +228,6 @@ async fn magnet_link_learns_its_name() {
     seeder.remove(&sg).await;
     let _ = std::fs::remove_dir_all(&root);
 }
-
 /// A torrent of two files ("pack/a.bin", "pack/b.bin").
 fn make_multi(a: &[u8], b: &[u8], tracker: &str) -> (Vec<u8>, Vec<u8>) {
     let piece = 16 * 1024;
@@ -307,6 +306,52 @@ async fn only_the_checked_files_of_a_torrent() {
     assert_eq!(total, Some(b.len() as u64));
     assert_eq!(std::fs::read(get.join("pack/b.bin")).unwrap(), b);
     assert!(!get.join("pack/a.bin").exists(), "the unchecked file is not kept");
+    seeder.remove(&sg).await;
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn pause_resume_and_cancel_a_torrent() {
+    let Some((root, data, file, seeder, sg, _)) = shared_file("pause").await else { return };
+    let mgr = swiftget_engine::Manager::new(tokio::runtime::Handle::current(), root.join("app")).unwrap();
+    let list_dir = root.join("list");
+    let id = mgr.add(swiftget_engine::NewDownload {
+        url: file.to_string_lossy().into_owned(),
+        save_dir: Some(list_dir.clone()),
+        start: true,
+        ..Default::default()
+    });
+    // Wait until it connects or downloads
+    for _ in 0..100 {
+        let st = mgr.get(id).unwrap().status;
+        if matches!(st, swiftget_engine::Status::Downloading | swiftget_engine::Status::Connecting) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    // Pause
+    mgr.pause(id);
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert_eq!(mgr.get(id).unwrap().status, swiftget_engine::Status::Paused);
+
+    // Resume (start)
+    mgr.start(id);
+    let mut status = swiftget_engine::Status::Queued;
+    for _ in 0..600 {
+        status = mgr.get(id).unwrap().status;
+        if matches!(status, swiftget_engine::Status::Completed | swiftget_engine::Status::Failed) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    assert_eq!(status, swiftget_engine::Status::Completed);
+    assert_eq!(std::fs::read(list_dir.join("song.bin")).unwrap(), data);
+
+    // Cancel / remove with file
+    mgr.remove(id, true);
+    tokio::time::sleep(Duration::from_millis(1000)).await;
+    assert!(!list_dir.join("song.bin").exists());
+
     seeder.remove(&sg).await;
     let _ = std::fs::remove_dir_all(&root);
 }

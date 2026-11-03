@@ -286,6 +286,7 @@ impl Aria2 {
         let _ = std::fs::create_dir_all(&self.data_dir);
         let dht = self.data_dir.join("dht.dat");
         let mut cmd = std::process::Command::new(&tool);
+        cmd.current_dir(&self.data_dir);
         cmd.args([
             "--enable-rpc=true",
             "--rpc-listen-all=false",
@@ -309,6 +310,9 @@ impl Aria2 {
             "--quiet=true",
             "--check-certificate=true",
             "--disk-cache=32M",
+            "--dht-entry-point=router.bittorrent.com:6881",
+            "--dht-entry-point6=dht.transmissionbt.com:6881",
+            "--bt-tracker=udp://tracker.opentrackr.org:1337/announce,udp://open.tracker.cl:1337/announce,udp://opentracker.i2p.rocks:6969/announce,udp://tracker.openbittorrent.com:6969/announce,http://tracker.openbittorrent.com:80/announce,udp://tracker.torrent.eu.org:451/announce",
         ])
         .arg(format!("--rpc-listen-port={port}"))
         .arg(format!("--rpc-secret={secret}"))
@@ -371,14 +375,34 @@ impl Aria2 {
         if let Some(sel) = o.select.as_deref().filter(|s| !s.is_empty()) {
             opts["select-file"] = json!(sel);
         }
-        let gid = if is_magnet(source) {
-            self.call("aria2.addUri", vec![json!([source.trim()]), opts]).await?
+        let res = if is_magnet(source) {
+            self.call("aria2.addUri", vec![json!([source.trim()]), opts.clone()]).await
         } else {
             let data = std::fs::read(source).context("the .torrent file can't be read")?;
             parse_torrent(&data)?;
-            self.call("aria2.addTorrent", vec![json!(base64(&data)), json!([]), opts]).await?
+            self.call("aria2.addTorrent", vec![json!(base64(&data)), json!([]), opts.clone()]).await
+        };
+        let gid = match res {
+            Ok(g) => g,
+            Err(e) if e.to_string().contains("already registered") => {
+                // Purge stopped/completed results and try once more
+                let _ = self.call("aria2.purgeDownloadResult", vec![]).await;
+                if is_magnet(source) {
+                    self.call("aria2.addUri", vec![json!([source.trim()]), opts]).await?
+                } else {
+                    let data = std::fs::read(source).context("the .torrent file can't be read")?;
+                    self.call("aria2.addTorrent", vec![json!(base64(&data)), json!([]), opts]).await?
+                }
+            }
+            Err(e) => return Err(e),
         };
         gid.as_str().map(String::from).ok_or_else(|| anyhow!("aria2 did not take the torrent"))
+    }
+
+    /// Change options of an active or followed download (speed limits, selected files).
+    pub async fn change_option(&self, gid: &str, opts: Value) -> anyhow::Result<()> {
+        self.call("aria2.changeOption", vec![json!(gid), opts]).await?;
+        Ok(())
     }
 
     pub async fn status(&self, gid: &str) -> anyhow::Result<TorrentStatus> {
@@ -416,6 +440,7 @@ impl Aria2 {
             }
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
+        let _ = self.call("aria2.purgeDownloadResult", vec![]).await;
     }
 
     /// The files of a torrent once aria2 knows them, with how much of each

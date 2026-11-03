@@ -1362,7 +1362,7 @@ impl Manager {
     async fn run_torrent(
         self: &Arc<Self>,
         id: DownloadId,
-        rec: DownloadRecord,
+        mut rec: DownloadRecord,
         progress: Arc<Progress>,
         cancel: CancellationToken,
         settings: &Settings,
@@ -1411,6 +1411,15 @@ impl Manager {
             // a magnet link found its file list: the torrent goes on under a new id
             if let Some(next) = st.followed_by.clone() {
                 gid = next;
+                let mut change = serde_json::json!({
+                    "max-download-limit": format!("{}K", opts.download_limit_kb),
+                    "max-upload-limit": format!("{}K", opts.upload_limit_kb),
+                    "bt-remove-unselected-file": "true",
+                });
+                if let Some(sel) = opts.select.as_deref().filter(|s| !s.is_empty()) {
+                    change["select-file"] = serde_json::json!(sel);
+                }
+                let _ = self.torrents.change_option(&gid, change).await;
                 continue;
             }
             // the chosen files only: aria2's own total also counts the
@@ -1439,6 +1448,9 @@ impl Manager {
             if total > 0 {
                 let name = if named { None } else { st.name.clone().map(|n| filename::sanitize(&n)) };
                 named = named || name.is_some();
+                if let Some(n) = &name {
+                    rec.file_name = n.clone();
+                }
                 self.update(id, move |x| {
                     x.total_size = Some(total);
                     x.resumable = true;

@@ -94,6 +94,6 @@ To build `Qivora-Setup.exe` locally on Windows:
    ```powershell
    $hash = (Get-FileHash dist\Qivora-Setup.exe -Algorithm SHA256).Hash.ToLower()
    $env:UPDATE_SIGNING_KEY = "<your-64-hex-private-seed>"
-   $sig = (cargo run --quiet --release -p swiftget-engine --example sign_update -- 1.0.7 $hash).Trim()
+   $sig = (cargo run --quiet --release -p swiftget-engine --example sign_update -- 1.0.8 $hash).Trim()
    ```
 3. Add `"sig": "$sig"` to `dist\version.json` and upload `dist\Qivora-Setup.exe` and `dist\version.json` to your GitHub Release.

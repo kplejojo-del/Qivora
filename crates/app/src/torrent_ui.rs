@@ -24,9 +24,9 @@ pub(crate) fn open(ui: &Ui, source: Option<&str>) {
     match source {
         Some(s) => d.set_source(s.into()),
         None if !d.window().is_visible() => {
-            // a magnet link in the clipboard is the likely one
+            // a magnet link or .torrent file in the clipboard is the likely one
             let clip = arboard::Clipboard::new().ok().and_then(|mut c| c.get_text().ok()).unwrap_or_default();
-            d.set_source(if torrent::is_magnet(&clip) { clip.trim().into() } else { SharedString::new() });
+            d.set_source(if torrent::is_torrent_source(&clip) { clip.trim().into() } else { SharedString::new() });
         }
         None => {}
     }

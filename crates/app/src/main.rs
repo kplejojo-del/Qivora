@@ -188,6 +188,7 @@ fn main() -> anyhow::Result<()> {
     install_crash_log();
     // started by Windows at sign-in: stay next to the clock, no window
     let background = std::env::args().any(|a| a == "--background");
+    let cli_target = std::env::args().skip(1).find(|a| !a.starts_with("--") && !a.starts_with("-"));
     let data_dir = default_data_dir();
     let port = Settings::load(&data_dir.join("settings.json")).browser_port;
 
@@ -206,7 +207,7 @@ fn main() -> anyhow::Result<()> {
     let server = match first {
         Ok(s) => Some(s),
         Err(_) => {
-            if api::notify_existing(port) {
+            if api::notify_existing(port, cli_target.as_deref()) {
                 return Ok(());
             }
             None
@@ -519,6 +520,13 @@ fn main() -> anyhow::Result<()> {
         winfx::set_opacity(main.window(), mgr.settings().opacity);
         if std::env::var_os("QIVORA_OPEN_ABOUT").is_some() {
             about();
+        }
+        if let Some(target) = cli_target {
+            if swiftget_engine::torrent::is_torrent_source(&target) {
+                torrent_ui::open_source(&target);
+            } else if target.starts_with("http://") || target.starts_with("https://") {
+                open_add_dialog(&ui.ctx, target, RequestHeaders::default(), None, VideoExtra::default());
+            }
         }
         let mut s = mgr.settings();
         if !s.extension_prompted {
@@ -1194,8 +1202,8 @@ fn handle_api(ui: &Ui, event: api::ApiEvent) {
             if let Some(list) = &req.headers {
                 swiftget_engine::ytdlp::apply_headers(&mut headers, list);
             }
-            // a torrent's magnet link from a page: the torrent window asks first
-            if swiftget_engine::torrent::is_magnet(&req.url) {
+            // a torrent's magnet link or .torrent file from a page: the torrent window asks first
+            if swiftget_engine::torrent::is_torrent_source(&req.url) {
                 torrent_ui::open_source(&req.url);
                 return;
             }
@@ -1246,8 +1254,8 @@ fn wire_add(ui: &Ui) {
                 if url != ctx.add_state.lock().unwrap().origin_url {
                     cancel_early(&ctx);
                 }
-                if swiftget_engine::torrent::is_magnet(&url) {
-                    // typed / pasted a magnet link: that is the torrent window's job
+                if swiftget_engine::torrent::is_torrent_source(&url) {
+                    // typed / pasted a magnet link or .torrent file: that is the torrent window's job
                     let _ = d.hide();
                     torrent_ui::open_source(&url);
                     return;
@@ -1953,8 +1961,8 @@ fn show_name_in_dialog(ctx: &Ctx, d: &AddDialog, name: &str, url: &str) -> Strin
 }
 
 pub(crate) fn open_add_dialog(ctx: &Ctx, url: String, headers: RequestHeaders, name_hint: Option<String>, extra: VideoExtra) {
-    // a magnet link: the torrent window
-    if swiftget_engine::torrent::is_magnet(&url) {
+    // a magnet link or .torrent file: the torrent window
+    if swiftget_engine::torrent::is_torrent_source(&url) {
         torrent_ui::open_source(&url);
         return;
     }
