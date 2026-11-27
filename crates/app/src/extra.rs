@@ -357,7 +357,8 @@ pub(crate) fn is_web_address(s: &str) -> bool {
 }
 
 /// What the newest version brings (shown once after an automatic update).
-const WHATS_NEW: [&str; 15] = [
+const WHATS_NEW: [&str; 16] = [
+    "New 3-theme UI switcher: switch seamlessly between Classic, Cyber Purple (Neon Dark), and Neon Blue (Space Dark) with persistent theme settings.",
     "Arabic: every window now reads from right to left (the program restarts once when the direction changes).",
     "The program has its own small FFmpeg inside: video and sound are joined, MP3 files are made and live streams are saved, with nothing extra to download.",
     "Live streams are saved as MP4 files.",

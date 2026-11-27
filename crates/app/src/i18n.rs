@@ -554,6 +554,7 @@ const AR: &[(&str, &str)] = &[
     ("Options…", "الخيارات…"),
     ("About", "حول البرنامج"),
     ("Exit", "خروج"),
+    ("New 3-theme UI switcher: switch seamlessly between Classic, Cyber Purple (Neon Dark), and Neon Blue (Space Dark) with persistent theme settings.", "مبدّل مظاهر جديد بـ 3 واجهات: التبديل الفوري بين المظهر الكلاسيكي، وCyber Purple، وNeon Blue مع حفظ الاختيار تلقائيًا."),
     ("Arabic: every window now reads from right to left (the program restarts once when the direction changes).", "العربية: كل النوافذ أصبحت من اليمين إلى اليسار (يُعاد تشغيل البرنامج مرة واحدة عند تغيير الاتجاه)."),
     ("The program has its own small FFmpeg inside: video and sound are joined, MP3 files are made and live streams are saved, with nothing extra to download.", "البرنامج فيه نسخة FFmpeg صغيرة خاصة به: دمج الفيديو والصوت، وعمل ملفات MP3، وحفظ البث المباشر، بدون تحميل أي شيء إضافي."),
     ("Live streams are saved as MP4 files.", "البث المباشر يُحفظ كملف MP4."),
