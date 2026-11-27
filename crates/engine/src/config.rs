@@ -245,8 +245,11 @@ pub struct Settings {
     pub show_progress_window: bool,
     pub queues: Vec<QueueDef>,
     /// 0 Light, 1 Dark, 2 Ocean, 3 Midnight, 4 Forest, 5 Black, 6 Sunset,
-    /// 7 Teal night, 8 Rose
+    /// 7 Teal night, 8 Rose, 9 Cyber Purple, 10 Neon Blue
     pub theme: u32,
+    /// Progress HUD theme: 0 Classic (Default), 1 Cyber Purple (Neon Dark), 2 Neon Blue (Space Dark)
+    #[serde(default)]
+    pub progress_theme: u32,
     /// how solid the main window is, 50..=100 (%)
     pub opacity: u32,
     /// size of all texts, 80..=150 (%)
@@ -382,6 +385,7 @@ impl Default for Settings {
             schedule: Schedule::default(),
             show_progress_window: true,
             theme: 0,
+            progress_theme: 0,
             opacity: 100,
             font_scale: 100,
             font_family: String::new(),
@@ -741,6 +745,25 @@ mod tests {
         s.server_limits.push(ServerLimit { host: "slow.example.com".into(), connections: 2 });
         assert_eq!(s.connections_for("https://a.slow.example.com/x", 32), 2);
         assert_eq!(s.connections_for("https://fast.example.com/x", 32), 32);
+    }
+
+    #[test]
+    fn progress_theme_persists_across_restarts() {
+        let dir = std::env::temp_dir().join(format!("qivora-theme-cfg-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("settings.json");
+
+        for (hud, mode) in [(0u32, 0u32), (1, 9), (2, 10)] {
+            let mut s = Settings::default();
+            s.progress_theme = hud;
+            s.theme = mode;
+            s.save(&path).unwrap();
+
+            let loaded = Settings::load(&path);
+            assert_eq!(loaded.progress_theme, hud);
+            assert_eq!(loaded.theme, mode);
+        }
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
 

@@ -144,7 +144,14 @@ fn read(ui: &Ui, d: &SettingsDialog, mut s: Settings) -> Result<Settings, String
     }
     // General
     s.language = crate::i18n::LANGS[(d.get_language().max(0) as usize).min(crate::i18n::LANGS.len() - 1)].0.into();
-    s.theme = d.get_theme().clamp(0, 8) as u32;
+    s.theme = d.get_theme().clamp(0, 10) as u32;
+    if s.theme == 9 {
+        s.progress_theme = 1;
+    } else if s.theme == 10 {
+        s.progress_theme = 2;
+    } else if s.theme == 0 {
+        s.progress_theme = 0;
+    }
     s.opacity = (d.get_window_opacity().round() as u32).clamp(50, 100);
     s.font_scale = (d.get_text_size().round() as u32).clamp(80, 150);
     s.font_family = crate::FONTS.get(d.get_font_index().max(0) as usize).copied().unwrap_or("").to_string();
@@ -232,8 +239,15 @@ fn read(ui: &Ui, d: &SettingsDialog, mut s: Settings) -> Result<Settings, String
 
 /// The look the Options window shows now (not saved yet).
 fn look_of(d: &SettingsDialog) -> crate::Look {
+    let mode = d.get_theme().clamp(0, 10);
+    let progress_theme = match mode {
+        9 => 1,
+        10 => 2,
+        _ => 0,
+    };
     crate::Look {
-        mode: d.get_theme().clamp(0, 8),
+        mode,
+        progress_theme,
         scale: (d.get_text_size().round() as u32).clamp(80, 150) as f32 / 100.0,
         family: crate::FONTS.get(d.get_font_index().max(0) as usize).copied().unwrap_or("").to_string(),
         background: d.get_bg_image().to_string(),

@@ -1,0 +1,1870 @@
+// Qivora Download Manager – Modular HUD Themes (Cyber Purple & Neon Blue)
+// Pure presentation layer: binds to the exact same properties and callbacks as Classic mode.
+
+import { Button, SpinBox, ComboBox, ListView } from "std-widgets.slint";
+import { SegView, Theme, TypeIcon, Glyph, HRow, CheckBox } from "common.slint";
+
+// Modular theme token palette (acts like CSS variables for HUD themes: 1 = Cyber Purple, 2 = Neon Blue)
+export global HudPalette {
+    out property <bool> blue: Theme.hud-theme == 2;
+
+    // Window & surfaces
+    out property <brush> win-bg: !blue
+        ? @linear-gradient(145deg, #0B051A 0%, #160A30 52%, #0C051D 100%)
+        : @linear-gradient(145deg, #050D1E 0%, #0A1A38 52%, #040B1A 100%);
+    out property <color> win-border: !blue ? #A855F778 : #00D2FF6E;
+
+    out property <brush> header-bg: !blue
+        ? @linear-gradient(90deg, #14072E 0%, #220D4A 48%, #0E0520 100%)
+        : @linear-gradient(90deg, #06142B 0%, #0B244D 48%, #040D1F 100%);
+    out property <color> header-line: !blue ? #A855F74D : #00D2FF45;
+
+    out property <brush> card-bg: !blue
+        ? @linear-gradient(180deg, #190B36E8 0%, #0F0622F4 100%)
+        : @linear-gradient(180deg, #0A1C3BE8 0%, #061126F4 100%);
+    out property <color> card-border: !blue ? #A855F759 : #00D2FF4D;
+    out property <color> card-glow: !blue ? #8B5CF633 : #00D2FF28;
+
+    out property <brush> stat-bg: !blue
+        ? @linear-gradient(180deg, #221045CC 0%, #130829DD 100%)
+        : @linear-gradient(180deg, #0C214477 0%, #07152D88 100%);
+    out property <color> stat-border: !blue ? #A855F745 : #00D2FF33;
+
+    // Typography & icons
+    out property <color> text-main: #FFFFFF;
+    out property <color> text-sub: !blue ? #C4B5FD : #8EC5E8;
+    out property <color> text-dim: !blue ? #9F8AD9 : #6B9EC2;
+    out property <color> title-highlight: !blue ? #C084FC : #00FF87;
+    out property <color> icon-tint: !blue ? #C084FC : #00D2FF;
+    out property <color> bolt-tint: !blue ? #E879F9 : #00FF87;
+    out property <color> speed-highlight: !blue ? #4ADE80 : #00FF87;
+
+    // Navigation tabs
+    out property <brush> tab-active-bg: !blue
+        ? @linear-gradient(90deg, #7C3AED 0%, #A855F7 55%, #D946EF 100%)
+        : @linear-gradient(90deg, #00C853 0%, #00E676 42%, #00B4DB 100%);
+    out property <color> tab-active-border: !blue ? #F0ABFCAA : #80FFDBAA;
+    out property <color> tab-active-glow: !blue ? #A855F766 : #00D2FF66;
+    out property <color> tab-idle-bg: !blue ? #160A2ECC : #081730CC;
+    out property <color> tab-idle-hover: !blue ? #24114ACC : #0E2750CC;
+    out property <color> tab-idle-border: !blue ? #A855F738 : #00D2FF33;
+
+    // Progress bars & circular gauge
+    out property <brush> gauge-stroke: !blue
+        ? @linear-gradient(135deg, #8B5CF6 0%, #D946EF 58%, #F472B6 100%)
+        : @linear-gradient(135deg, #00B4DB 0%, #00D2FF 45%, #00FF87 100%);
+    out property <color> gauge-track: !blue ? #241147 : #0B2144;
+    out property <color> tick-on: !blue ? #D946EF : #00FF87;
+    out property <color> tick-off: !blue ? #4C1D9588 : #0E346688;
+    out property <color> eq-bar: !blue ? #D946EF : #00FF87;
+    out property <color> status-tint: !blue ? #D8B4FE : #00FF87;
+
+    out property <brush> bar-fill: !blue
+        ? @linear-gradient(90deg, #6D28D9 0%, #A855F7 62%, #F0ABFC 100%)
+        : @linear-gradient(90deg, #00B4DB 0%, #00E676 58%, #00FF87 100%);
+    out property <color> bar-track: !blue ? #1D0E3B : #081A36;
+    out property <color> bar-border: !blue ? #A855F755 : #00D2FF4D;
+    out property <color> bar-tip: !blue ? #FDF4FF : #E0FFF4;
+    out property <color> bar-glow: !blue ? #D946EFAA : #00FF87AA;
+
+    // Action buttons
+    out property <brush> hide-bg: !blue
+        ? @linear-gradient(180deg, #210F42 0%, #14082B 100%)
+        : @linear-gradient(180deg, #0B1F40 0%, #061229 100%);
+    out property <brush> hide-hover: !blue
+        ? @linear-gradient(180deg, #2E155C 0%, #1B0B3B 100%)
+        : @linear-gradient(180deg, #102D5C 0%, #091B3B 100%);
+    out property <color> hide-border: !blue ? #A855F788 : #00D2FF99;
+
+    out property <brush> pause-bg: !blue
+        ? @linear-gradient(90deg, #5B21B6 0%, #8B5CF6 50%, #7C3AED 100%)
+        : @linear-gradient(90deg, #1D4ED8 0%, #0284C7 55%, #00B4DB 100%);
+    out property <brush> pause-hover: !blue
+        ? @linear-gradient(90deg, #6D28D9 0%, #A855F7 50%, #9333EA 100%)
+        : @linear-gradient(90deg, #2563EB 0%, #039BE5 55%, #00D2FF 100%);
+    out property <color> pause-border: !blue ? #DDD6FEAA : #7DD3FCAA;
+    out property <color> pause-glow: !blue ? #8B5CF666 : #00D2FF66;
+
+    out property <brush> cancel-bg: !blue
+        ? @linear-gradient(90deg, #881337 0%, #E11D48 55%, #BE185D 100%)
+        : @linear-gradient(90deg, #3B0764 0%, #6D28D9 42%, #9F1239 100%);
+    out property <brush> cancel-hover: !blue
+        ? @linear-gradient(90deg, #9F1239 0%, #F43F5E 55%, #DB2777 100%)
+        : @linear-gradient(90deg, #4C1D95 0%, #7C3AED 42%, #BE123C 100%);
+    out property <color> cancel-border: !blue ? #FDA4AF88 : #F43F5E88;
+    out property <color> cancel-glow: !blue ? #E11D4855 : #BE123C55;
+
+    // Connections table & footer
+    out property <color> table-bg: !blue ? #0E0520EE : #061024EE;
+    out property <brush> table-head: !blue
+        ? @linear-gradient(180deg, #210F45 0%, #160930 100%)
+        : @linear-gradient(180deg, #0D2347 0%, #081733 100%);
+    out property <color> row-alt: !blue ? #1A0C3655 : #0B1E3D55;
+    out property <color> row-line: !blue ? #A855F722 : #00D2FF22;
+    out property <color> scroll-track: !blue ? #180A33 : #081833;
+    out property <color> scroll-thumb: !blue ? #8B5CF6BB : #00D2FFBB;
+    out property <color> footer-bg: !blue ? #090314 : #040A17;
+}
+
+// Small HUD vector icons for tabs, stat cards, and footer
+component HudVectorIcon inherits Rectangle {
+    in property <string> kind;
+    in property <color> tint: HudPalette.icon-tint;
+    width: 16px;
+    height: 16px;
+
+    if root.kind == "dl-arrow": Path {
+        viewbox-width: 16;
+        viewbox-height: 16;
+        fill: root.tint;
+        commands: "M 6.5 2 L 9.5 2 L 9.5 8 L 12.8 8 L 8 13.2 L 3.2 8 L 6.5 8 Z M 3 14 L 13 14 L 13 15.2 L 3 15.2 Z";
+    }
+    if root.kind == "gauge": Path {
+        viewbox-width: 16;
+        viewbox-height: 16;
+        stroke: root.tint;
+        stroke-width: 1.5px;
+        fill: transparent;
+        commands: "M 2.5 12 A 6 6 0 1 1 13.5 12 M 8 8.5 L 11.2 5.2 M 8 8 A 1 1 0 1 1 7.99 8 Z";
+    }
+    if root.kind == "check-box": Path {
+        viewbox-width: 16;
+        viewbox-height: 16;
+        stroke: root.tint;
+        stroke-width: 1.5px;
+        fill: transparent;
+        commands: "M 2.5 3.5 L 11.5 3.5 L 11.5 5 M 2.5 3.5 L 2.5 13.5 L 12.5 13.5 L 12.5 8.5 M 5.2 8.2 L 7.5 10.5 L 13.8 4.2";
+    }
+    if root.kind == "floppy": Path {
+        viewbox-width: 16;
+        viewbox-height: 16;
+        stroke: root.tint;
+        stroke-width: 1.4px;
+        fill: transparent;
+        commands: "M 2.5 2.5 L 11.5 2.5 L 13.5 4.5 L 13.5 13.5 L 2.5 13.5 Z M 5 2.5 L 5 6.2 L 10.5 6.2 L 10.5 2.5 M 4.8 9.2 L 11.2 9.2 L 11.2 13.5 L 4.8 13.5 Z";
+    }
+    if root.kind == "tray-dl": Path {
+        viewbox-width: 16;
+        viewbox-height: 16;
+        stroke: root.tint;
+        stroke-width: 1.5px;
+        fill: transparent;
+        commands: "M 8 2 L 8 9.8 M 5.2 7.2 L 8 10 L 10.8 7.2 M 2.5 10.2 L 2.5 13.2 L 13.5 13.2 L 13.5 10.2";
+    }
+    if root.kind == "bolt": Path {
+        viewbox-width: 16;
+        viewbox-height: 16;
+        fill: root.tint;
+        commands: "M 9.2 1.2 L 3.5 9 L 7.6 9 L 6.4 14.8 L 12.5 7 L 8.4 7 Z";
+    }
+    if root.kind == "clock": Path {
+        viewbox-width: 16;
+        viewbox-height: 16;
+        stroke: root.tint;
+        stroke-width: 1.5px;
+        fill: transparent;
+        commands: "M 8 2 A 6 6 0 1 1 7.99 2 Z M 8 4.5 L 8 8.2 L 10.6 9.8";
+    }
+    if root.kind == "resume-ring": Rectangle {
+        Path {
+            viewbox-width: 16;
+            viewbox-height: 16;
+            stroke: root.tint;
+            stroke-width: 1.4px;
+            fill: transparent;
+            commands: "M 8 2 A 6 6 0 1 1 7.99 2 Z";
+        }
+        Path {
+            viewbox-width: 16;
+            viewbox-height: 16;
+            fill: root.tint;
+            commands: "M 6.5 5.2 L 11.2 8 L 6.5 10.8 Z";
+        }
+    }
+    if root.kind == "bars": Rectangle {
+        Rectangle { x: 2px; y: 9px; width: 2.2px; height: 5px; border-radius: 1px; background: root.tint; }
+        Rectangle { x: 5.5px; y: 6px; width: 2.2px; height: 8px; border-radius: 1px; background: root.tint; }
+        Rectangle { x: 9px; y: 3.5px; width: 2.2px; height: 10.5px; border-radius: 1px; background: root.tint; }
+        Rectangle { x: 12.5px; y: 7px; width: 2.2px; height: 7px; border-radius: 1px; background: root.tint; }
+    }
+    if root.kind == "crown": Path {
+        viewbox-width: 16;
+        viewbox-height: 16;
+        fill: #FBBF24;
+        commands: "M 2 12.5 L 14 12.5 L 14 14 L 2 14 Z M 2 11.2 L 1.5 5 L 5.2 8 L 8 3.5 L 10.8 8 L 14.5 5 L 14 11.2 Z";
+    }
+    if root.kind == "more": Path {
+        viewbox-width: 16;
+        viewbox-height: 16;
+        stroke: root.tint;
+        stroke-width: 1.5px;
+        fill: transparent;
+        commands: "M 2.5 4.5 L 13.5 4.5 M 2.5 8 L 13.5 8 M 2.5 11.5 L 13.5 11.5";
+    }
+}
+
+// Theme / Palette quick-selector icon button for Classic & HUD title bars
+export component ThemePaletteButton inherits Rectangle {
+    in property <bool> is-hud: false;
+    in property <bool> active-open: false;
+    callback clicked();
+
+    width: root.is-hud ? 34px : 36px;
+    height: root.is-hud ? 28px : 30px;
+    border-radius: root.is-hud ? 7px : 0px;
+    border-width: root.is-hud ? 1px : 0px;
+    border-color: root.is-hud
+        ? (ta.has-hover || root.active-open ? HudPalette.icon-tint : HudPalette.card-border)
+        : transparent;
+    background: root.is-hud
+        ? (ta.pressed || root.active-open ? HudPalette.tab-idle-hover : ta.has-hover ? HudPalette.tab-idle-bg : transparent)
+        : (ta.pressed ? #d6e8ff : ta.has-hover ? #e8f2ff : transparent);
+
+    animate background, border-color { duration: 200ms; easing: ease-in-out; }
+
+    Glyph {
+        x: (parent.width - 16px) / 2;
+        y: (parent.height - 16px) / 2;
+        kind: "palette";
+        tint: root.is-hud ? HudPalette.icon-tint : #0066ff;
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// One row inside the 3-theme quick selector popover
+component ThemeChoiceItem inherits Rectangle {
+    in property <string> title;
+    in property <string> subtitle;
+    in property <color> swatch-a;
+    in property <color> swatch-b;
+    in property <bool> selected;
+    in property <bool> dark-surface;
+    callback clicked();
+
+    height: 44px;
+    border-radius: 8px;
+    border-width: root.selected ? 1px : 0px;
+    border-color: root.dark-surface ? HudPalette.icon-tint : #0066ff;
+    background: root.selected
+        ? (root.dark-surface ? #ffffff18 : #e0ecff)
+        : ta.has-hover
+            ? (root.dark-surface ? #ffffff10 : #f1f5f9)
+            : transparent;
+
+    animate background { duration: 180ms; easing: ease-in-out; }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+
+    HRow {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 10px;
+
+        // Dual-tone theme color swatch
+        Rectangle {
+            width: 24px;
+            Rectangle {
+                y: (parent.height - 22px) / 2;
+                width: 22px;
+                height: 22px;
+                border-radius: 11px;
+                border-width: 1.5px;
+                border-color: root.dark-surface ? #ffffff55 : #94a3b8;
+                background: @linear-gradient(135deg, root.swatch-a 0%, root.swatch-b 100%);
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            spacing: 1px;
+            Text {
+                horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                text: root.title;
+                font-size: 12px * Theme.font-scale;
+                font-weight: root.selected ? 700 : 600;
+                color: root.dark-surface ? #FFFFFF : #0f172a;
+                overflow: elide;
+            }
+            Text {
+                horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                text: root.subtitle;
+                font-size: 10px * Theme.font-scale;
+                color: root.dark-surface ? #A5B4FC : #64748b;
+                overflow: elide;
+            }
+        }
+
+        if root.selected: Rectangle {
+            width: 18px;
+            Glyph {
+                y: (parent.height - 16px) / 2;
+                kind: "check";
+                tint: root.dark-surface ? HudPalette.speed-highlight : #0066ff;
+            }
+        }
+    }
+}
+
+// Reusable 3-Theme Quick Selector Popover Card
+export component ThemeSelectorCard inherits Rectangle {
+    in property <int> current-hud-theme: Theme.hud-theme;
+    callback pick-theme(int);
+
+    property <bool> dark-card: root.current-hud-theme > 0;
+    width: 256px;
+    height: box.preferred-height;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: root.dark-card ? HudPalette.card-border : #cbd5e1;
+    background: root.dark-card
+        ? (Theme.hud-theme == 2 ? #081730F8 : #15092DF8)
+        : #FFFFFFFA;
+    drop-shadow-blur: 18px;
+    drop-shadow-color: #00000088;
+    drop-shadow-offset-y: 6px;
+
+    // Absorb clicks on the card background so they don't hit the backdrop
+    TouchArea { }
+
+    box := VerticalLayout {
+        padding: 8px;
+        spacing: 4px;
+
+        Text {
+            horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+            text: "  " + @tr("UI Theme");
+            font-size: 10.5px * Theme.font-scale;
+            font-weight: 700;
+            color: root.dark-card ? HudPalette.text-sub : #64748b;
+        }
+
+        ThemeChoiceItem {
+            title: @tr("Classic (Default)");
+            subtitle: @tr("Clean light interface");
+            swatch-a: #ffffff;
+            swatch-b: #22c55e;
+            selected: root.current-hud-theme == 0;
+            dark-surface: root.dark-card;
+            clicked => { root.pick-theme(0); }
+        }
+
+        ThemeChoiceItem {
+            title: @tr("Cyber Purple (Neon Dark)");
+            subtitle: @tr("Futuristic violet & magenta HUD");
+            swatch-a: #7C3AED;
+            swatch-b: #EC4899;
+            selected: root.current-hud-theme == 1;
+            dark-surface: root.dark-card;
+            clicked => { root.pick-theme(1); }
+        }
+
+        ThemeChoiceItem {
+            title: @tr("Neon Blue (Space Dark)");
+            subtitle: @tr("Electric cyan & emerald HUD");
+            swatch-a: #00D2FF;
+            swatch-b: #00FF87;
+            selected: root.current-hud-theme == 2;
+            dark-surface: root.dark-card;
+            clicked => { root.pick-theme(2); }
+        }
+    }
+}
+
+// Large Circular Progress Gauge (SVG Path Ring + Dotted Outer Ticks + Animated Mini Equalizer)
+component CircularProgressGauge inherits Rectangle {
+    in property <float> progress: 0.0;
+    in property <string> percent-text: "0.00%";
+    in property <string> status-text: "";
+    in property <bool> active-running: false;
+    in property <int> anim-phase: 0;
+
+    width: 158px;
+    height: 158px;
+
+    property <float> clamped: clamp(root.progress, 0.002, 0.9995);
+    property <angle> sweep-angle: root.clamped * 359.8deg;
+
+    // Subtle ambient neon halo behind the ring
+    Rectangle {
+        x: 19px;
+        y: 19px;
+        width: 120px;
+        height: 120px;
+        border-radius: 60px;
+        background: transparent;
+        border-width: 2px;
+        border-color: HudPalette.card-glow;
+        drop-shadow-blur: 22px;
+        drop-shadow-color: HudPalette.tab-active-glow;
+    }
+
+    // Outer dotted tick ring (36 ticks around radius 72px)
+    for tick in 36: Rectangle {
+        property <angle> ang: tick * 10deg;
+        property <bool> lit: root.progress > 0.005 && (tick / 36.0) <= root.progress;
+        x: 79px + 72px * Math.sin(self.ang) - 1.5px;
+        y: 79px - 72px * Math.cos(self.ang) - 1.5px;
+        width: 3px;
+        height: 3px;
+        border-radius: 1.5px;
+        background: self.lit ? HudPalette.tick-on : HudPalette.tick-off;
+        animate background { duration: 200ms; easing: ease-in-out; }
+    }
+
+    // Dark inner ring track (radius 58px in 158x158 -> viewbox 100x100 radius 37)
+    Path {
+        x: 9px;
+        y: 9px;
+        width: 140px;
+        height: 140px;
+        viewbox-x: 0;
+        viewbox-y: 0;
+        viewbox-width: 100;
+        viewbox-height: 100;
+        stroke: HudPalette.gauge-track;
+        stroke-width: 9px;
+        fill: transparent;
+        commands: "M 50 11 A 39 39 0 1 1 49.99 11 Z";
+    }
+
+    // Inner dark glass core disc
+    Rectangle {
+        x: 28px;
+        y: 28px;
+        width: 102px;
+        height: 102px;
+        border-radius: 51px;
+        background: !HudPalette.blue
+            ? @linear-gradient(180deg, #170A33 0%, #0D041E 100%)
+            : @linear-gradient(180deg, #091B3A 0%, #050E21 100%);
+        border-width: 1px;
+        border-color: HudPalette.stat-border;
+    }
+
+    // Active glowing SVG arc stroke
+    if root.progress > 0.003: Path {
+        x: 9px;
+        y: 9px;
+        width: 140px;
+        height: 140px;
+        viewbox-x: 0;
+        viewbox-y: 0;
+        viewbox-width: 100;
+        viewbox-height: 100;
+        stroke: HudPalette.gauge-stroke;
+        stroke-width: 9px;
+        fill: transparent;
+        MoveTo {
+            x: 50;
+            y: 11;
+        }
+        ArcTo {
+            radius-x: 39;
+            radius-y: 39;
+            large-arc: root.clamped > 0.5;
+            sweep: true;
+            x: 50 + 39 * Math.sin(root.sweep-angle);
+            y: 50 - 39 * Math.cos(root.sweep-angle);
+        }
+    }
+
+    // Rounded start cap + glowing leading tip cap on the ring (radius = 39% of 140px = 54.6px)
+    if root.progress > 0.008: Rectangle {
+        x: 79px - 4.5px;
+        y: 79px - 54.6px - 4.5px;
+        width: 9px;
+        height: 9px;
+        border-radius: 4.5px;
+        background: !HudPalette.blue ? #8B5CF6 : #00B4DB;
+    }
+    if root.progress > 0.008: Rectangle {
+        x: 79px + 54.6px * Math.sin(root.sweep-angle) - 5.5px;
+        y: 79px - 54.6px * Math.cos(root.sweep-angle) - 5.5px;
+        width: 11px;
+        height: 11px;
+        border-radius: 5.5px;
+        background: HudPalette.bar-tip;
+        drop-shadow-blur: 10px;
+        drop-shadow-color: HudPalette.bar-glow;
+    }
+
+    // Center content: bold percentage + status + animated 5-bar mini equalizer
+    VerticalLayout {
+        x: 26px;
+        y: 38px;
+        width: 106px;
+        height: 86px;
+        alignment: center;
+        spacing: 3px;
+
+        Text {
+            text: root.percent-text;
+            horizontal-alignment: center;
+            font-size: 20px * Theme.font-scale;
+            font-weight: 800;
+            color: #FFFFFF;
+        }
+
+        Text {
+            text: root.status-text;
+            horizontal-alignment: center;
+            font-size: 10px * Theme.font-scale;
+            font-weight: 600;
+            color: HudPalette.status-tint;
+            overflow: elide;
+        }
+
+        // Mini 5-bar equalizer
+        HorizontalLayout {
+            alignment: center;
+            spacing: 2.5px;
+            height: 15px;
+            for b in 5: Rectangle {
+                width: 3px;
+                VerticalLayout {
+                    alignment: end;
+                    Rectangle {
+                        property <int> wave: Math.mod(root.anim-phase + b * 2, 6);
+                        width: 3px;
+                        height: !root.active-running ? 4px
+                            : self.wave == 0 ? 5px
+                            : self.wave == 1 ? 9px
+                            : self.wave == 2 ? 13px
+                            : self.wave == 3 ? 10px
+                            : self.wave == 4 ? 14px
+                            : 7px;
+                        border-radius: 1.5px;
+                        background: HudPalette.eq-bar;
+                        animate height { duration: 150ms; easing: ease-in-out; }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Pill-shaped HUD navigation tab
+component HudNavTab inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    in property <bool> active;
+    callback clicked();
+
+    height: 30px;
+    width: row.preferred-width + 26px;
+    border-radius: 15px;
+    border-width: 1px;
+    border-color: root.active ? HudPalette.tab-active-border : HudPalette.tab-idle-border;
+    background: root.active
+        ? HudPalette.tab-active-bg
+        : ta.has-hover ? HudPalette.tab-idle-hover : HudPalette.tab-idle-bg;
+    drop-shadow-blur: root.active ? 12px : 0px;
+    drop-shadow-color: root.active ? HudPalette.tab-active-glow : transparent;
+
+    animate border-color, drop-shadow-blur { duration: 220ms; easing: ease-in-out; }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+
+    row := HRow {
+        alignment: center;
+        spacing: 6px;
+        VerticalLayout {
+            alignment: center;
+            HudVectorIcon {
+                width: 14px;
+                height: 14px;
+                kind: root.icon;
+                tint: root.active ? #FFFFFF : HudPalette.icon-tint;
+            }
+        }
+        Text {
+            text: root.text;
+            vertical-alignment: center;
+            font-size: 11.5px * Theme.font-scale;
+            font-weight: root.active ? 700 : 500;
+            color: root.active ? #FFFFFF : HudPalette.text-sub;
+        }
+    }
+}
+
+// Glassmorphic Stat Card (Cyber Purple) / Clean Divided Stat Cell (Neon Blue)
+component HudStatBox inherits Rectangle {
+    in property <string> icon;
+    in property <color> icon-color: HudPalette.icon-tint;
+    in property <string> label;
+    in property <string> value;
+    in property <color> value-color: #FFFFFF;
+    in property <bool> boxed: true;
+
+    horizontal-stretch: 1;
+    min-height: 68px;
+    border-radius: root.boxed ? 10px : 6px;
+    border-width: root.boxed ? 1px : 0px;
+    border-color: HudPalette.stat-border;
+    background: root.boxed ? HudPalette.stat-bg : transparent;
+
+    VerticalLayout {
+        padding-top: 6px;
+        padding-bottom: 6px;
+        padding-left: 4px;
+        padding-right: 4px;
+        spacing: 2px;
+        alignment: center;
+
+        HorizontalLayout {
+            alignment: center;
+            HudVectorIcon {
+                kind: root.icon;
+                tint: root.icon-color;
+            }
+        }
+
+        Text {
+            text: root.label;
+            horizontal-alignment: center;
+            font-size: 10px * Theme.font-scale;
+            color: HudPalette.text-sub;
+            overflow: elide;
+        }
+
+        Text {
+            text: root.value;
+            horizontal-alignment: center;
+            font-size: 11px * Theme.font-scale;
+            font-weight: 700;
+            color: root.value-color;
+            overflow: elide;
+        }
+    }
+}
+
+// Glowing HUD Pill Action Button
+component HudPillButton inherits Rectangle {
+    in property <string> text;
+    in property <string> glyph: "";
+    in property <color> glyph-tint: #FFFFFF;
+    in property <string> variant: "neutral"; // "neutral", "pause", "cancel"
+    callback clicked();
+
+    height: 32px;
+    min-width: content.preferred-width + 28px;
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: root.variant == "pause" ? HudPalette.pause-border
+        : root.variant == "cancel" ? HudPalette.cancel-border
+        : HudPalette.hide-border;
+    background: root.variant == "pause"
+        ? (ta.has-hover ? HudPalette.pause-hover : HudPalette.pause-bg)
+        : root.variant == "cancel"
+            ? (ta.has-hover ? HudPalette.cancel-hover : HudPalette.cancel-bg)
+            : (ta.has-hover ? HudPalette.hide-hover : HudPalette.hide-bg);
+    drop-shadow-blur: root.variant == "neutral" ? 6px : 12px;
+    drop-shadow-color: root.variant == "pause" ? HudPalette.pause-glow
+        : root.variant == "cancel" ? HudPalette.cancel-glow
+        : HudPalette.card-glow;
+
+    animate border-color, drop-shadow-blur { duration: 200ms; easing: ease-in-out; }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+
+    content := HRow {
+        alignment: center;
+        spacing: 6px;
+        if root.glyph != "": VerticalLayout {
+            alignment: center;
+            Glyph {
+                width: 13px;
+                height: 13px;
+                kind: root.glyph;
+                tint: root.glyph-tint;
+            }
+        }
+        Text {
+            text: root.text;
+            vertical-alignment: center;
+            font-size: 11.5px * Theme.font-scale;
+            font-weight: 700;
+            color: #FFFFFF;
+        }
+    }
+}
+
+// HUD Caption Button (tray / min / close) styled for dark neon header
+component HudCaptionBtn inherits Rectangle {
+    in property <string> kind;
+    callback clicked();
+    out property <bool> hovered: ta.has-hover;
+
+    width: 34px;
+    height: 28px;
+    border-radius: 6px;
+    background: ta.pressed
+        ? (root.kind == "close" ? #be123c : #ffffff22)
+        : ta.has-hover
+            ? (root.kind == "close" ? #e11d48 : #ffffff16)
+            : transparent;
+
+    animate background { duration: 150ms; easing: ease-in-out; }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+
+    Path {
+        x: (parent.width - 10px) / 2;
+        y: (parent.height - 10px) / 2;
+        width: 10px;
+        height: 10px;
+        viewbox-width: 10;
+        viewbox-height: 10;
+        stroke-width: 1.3px;
+        stroke: root.kind == "close" && !ta.has-hover && HudPalette.blue ? #FB7185
+            : root.kind == "min" && HudPalette.blue ? #00FF87
+            : #E2E8F0;
+        fill: transparent;
+        commands: root.kind == "close" ? "M 1 1 L 9 9 M 9 1 L 1 9"
+            : root.kind == "min" ? "M 1 5.5 L 9 5.5"
+            : "M 5 0.5 L 5 6.5 M 2.4 4 L 5 6.5 L 7.6 4 M 1 6.8 L 1 9.2 L 9 9.2 L 9 6.8";
+    }
+}
+
+// Full HUD Dashboard View for Cyber Purple (Theme 2) & Neon Blue (Theme 3)
+export component HudDetailsView inherits Rectangle {
+    in property <string> name;
+    in property <string> percent-precise;
+    in property <string> url;
+    in property <string> status;
+    in property <string> size;
+    in property <string> downloaded;
+    in property <string> downloaded-short;
+    in property <string> speed;
+    in property <string> eta;
+    in property <string> resumable;
+    in property <bool> resumable-ok;
+    in property <string> error;
+    in property <string> kind: "general";
+    in property <float> progress;
+    in property <int> state;
+    in property <[SegView]> segs;
+    in property <string> conn-status: "Fast";
+    in property <bool> conn-online: true;
+    in property <string> app-version: "1.0.8";
+
+    in-out property <bool> show-details: true;
+    in-out property <int> tab: 0;
+    in-out property <bool> limit-on;
+    in-out property <int> limit-kb: 500;
+    in-out property <int> when-done: 0;
+    in-out property <bool> complete-dialog: true;
+    in-out property <bool> force-close;
+    in-out property <bool> theme-menu-open: false;
+
+    callback pause();
+    callback resume();
+    callback cancel-download();
+    callback close-window();
+    callback hide-to-tray();
+    callback limit-changed();
+    callback completion-changed();
+    callback start-drag();
+    callback minimize();
+    callback close-clicked();
+    callback details-toggled();
+    callback open-folder();
+    callback play-preview();
+
+    out property <length> preferred-total-height: main-col.preferred-height;
+    out property <bool> tray-hovered: tray-btn.hovered;
+
+    property <bool> more-open: false;
+    property <int> eq-phase: 0;
+
+    Timer {
+        interval: 160ms;
+        running: root.state == 1;
+        triggered => {
+            root.eq-phase = Math.mod(root.eq-phase + 1, 12);
+        }
+    }
+
+    background: HudPalette.win-bg;
+    border-width: 1.5px;
+    border-color: HudPalette.win-border;
+
+    main-col := VerticalLayout {
+        width: parent.width;
+        height: parent.height;
+        spacing: 0px;
+
+        // ==================== 1. STYLIZED HEADER BAR ====================
+        Rectangle {
+            height: 52px;
+            background: HudPalette.header-bg;
+
+            HRow {
+                padding-left: 12px;
+                padding-right: 8px;
+                spacing: 8px;
+
+                // Draggable title region
+                Rectangle {
+                    horizontal-stretch: 1;
+                    TouchArea {
+                        pointer-event(ev) => {
+                            if (ev.button == PointerEventButton.left && ev.kind == PointerEventKind.down) {
+                                root.start-drag();
+                            }
+                        }
+                    }
+                    HRow {
+                        spacing: 10px;
+                        VerticalLayout {
+                            alignment: center;
+                            Rectangle {
+                                width: 34px;
+                                height: 34px;
+                                border-radius: 17px;
+                                background: !HudPalette.blue
+                                    ? @linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)
+                                    : @linear-gradient(135deg, #0284C7 0%, #00FF87 100%);
+                                border-width: 1px;
+                                border-color: #ffffff44;
+                                Image {
+                                    x: 5px;
+                                    y: 5px;
+                                    width: 24px;
+                                    height: 24px;
+                                    source: @image-url("icon-window.png");
+                                }
+                            }
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 1px;
+                            horizontal-stretch: 1;
+                            HRow {
+                                spacing: 5px;
+                                Text {
+                                    text: "Qivora";
+                                    font-size: 15px * Theme.font-scale;
+                                    font-weight: 800;
+                                    color: #FFFFFF;
+                                }
+                                Text {
+                                    text: "Download";
+                                    font-size: 15px * Theme.font-scale;
+                                    font-weight: 800;
+                                    color: HudPalette.title-highlight;
+                                }
+                                Text {
+                                    text: "Manager";
+                                    font-size: 15px * Theme.font-scale;
+                                    font-weight: 800;
+                                    color: #FFFFFF;
+                                }
+                            }
+                            Text {
+                                horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                                text: !HudPalette.blue
+                                    ? @tr("Accelerate Your Downloads")
+                                    : @tr("Accelerate your downloads with confidence");
+                                font-size: 10.5px * Theme.font-scale;
+                                font-italic: true;
+                                color: HudPalette.text-sub;
+                                overflow: elide;
+                            }
+                        }
+                    }
+                }
+
+                // Neon Blue version badge (matches Space Dark HUD header)
+                if HudPalette.blue: VerticalLayout {
+                    alignment: center;
+                    Rectangle {
+                        height: 24px;
+                        width: ver-row.preferred-width + 18px;
+                        border-radius: 12px;
+                        background: #071936CC;
+                        border-width: 1px;
+                        border-color: #00D2FF44;
+                        ver-row := HRow {
+                            alignment: center;
+                            spacing: 5px;
+                            Text {
+                                text: "Qivora " + root.app-version;
+                                vertical-alignment: center;
+                                font-size: 10.5px * Theme.font-scale;
+                                font-weight: 700;
+                                color: #E2E8F0;
+                            }
+                            VerticalLayout {
+                                alignment: center;
+                                Rectangle {
+                                    width: 12px;
+                                    height: 12px;
+                                    border-radius: 6px;
+                                    background: #00E676;
+                                    Path {
+                                        viewbox-width: 12;
+                                        viewbox-height: 12;
+                                        stroke: #041326;
+                                        stroke-width: 1.8px;
+                                        fill: transparent;
+                                        commands: "M 2.5 6.2 L 5 8.6 L 9.5 3.6";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Theme Switcher Palette Button + Window Caption Controls
+                VerticalLayout {
+                    alignment: center;
+                    HRow {
+                        spacing: 3px;
+                        ThemePaletteButton {
+                            is-hud: true;
+                            active-open: root.theme-menu-open;
+                            clicked => {
+                                root.more-open = false;
+                                root.theme-menu-open = !root.theme-menu-open;
+                            }
+                        }
+                        tray-btn := HudCaptionBtn {
+                            kind: "tray";
+                            visible: root.state != 3;
+                            width: root.state != 3 ? 34px : 0px;
+                            clicked => { root.hide-to-tray(); }
+                        }
+                        HudCaptionBtn {
+                            kind: "min";
+                            clicked => { root.minimize(); }
+                        }
+                        HudCaptionBtn {
+                            kind: "close";
+                            clicked => { root.close-clicked(); }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                y: parent.height - 1px;
+                width: parent.width;
+                height: 1px;
+                background: HudPalette.header-line;
+            }
+        }
+
+        // ==================== 2. DASHBOARD BODY ====================
+        VerticalLayout {
+            vertical-stretch: 1;
+            padding-left: 12px;
+            padding-right: 12px;
+            padding-top: 8px;
+            padding-bottom: 8px;
+            spacing: 8px;
+
+            // ---- Pill Navigation Tabs ----
+            HRow {
+                spacing: 8px;
+                HudNavTab {
+                    text: @tr("Download status");
+                    icon: "dl-arrow";
+                    active: root.tab == 0;
+                    clicked => { root.tab = 0; }
+                }
+                HudNavTab {
+                    text: @tr("Speed Limiter");
+                    icon: "gauge";
+                    active: root.tab == 1;
+                    clicked => { root.tab = 1; }
+                }
+                HudNavTab {
+                    text: @tr("Options on completion");
+                    icon: "check-box";
+                    active: root.tab == 2;
+                    clicked => { root.tab = 2; }
+                }
+                Rectangle { horizontal-stretch: 1; }
+            }
+
+            // ---- Main Glassmorphic Dashboard Card ----
+            Rectangle {
+                min-height: 186px;
+                vertical-stretch: root.show-details ? 0 : 1;
+                border-radius: 12px;
+                border-width: 1px;
+                border-color: HudPalette.card-border;
+                background: HudPalette.card-bg;
+                drop-shadow-blur: 14px;
+                drop-shadow-color: HudPalette.card-glow;
+
+                animate border-color { duration: 220ms; easing: ease-in-out; }
+
+                // TAB 0: 2-Column HUD Download Status
+                if root.tab == 0: HRow {
+                    padding: 12px;
+                    spacing: 14px;
+
+                    // Left Column: Circular Progress Gauge
+                    VerticalLayout {
+                        alignment: center;
+                        width: 160px;
+                        CircularProgressGauge {
+                            progress: root.progress;
+                            percent-text: root.percent-precise;
+                            status-text: root.status;
+                            active-running: root.state == 1;
+                            anim-phase: root.eq-phase;
+                        }
+                    }
+
+                    // Right Column: File Header + Glowing Progress Bar + Stat Cards
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        alignment: center;
+                        spacing: 10px;
+
+                        // File Icon + Bold File Name + URL
+                        HRow {
+                            spacing: 10px;
+                            VerticalLayout {
+                                alignment: center;
+                                Rectangle {
+                                    width: 40px;
+                                    height: 40px;
+                                    border-radius: 10px;
+                                    background: !HudPalette.blue
+                                        ? @linear-gradient(135deg, #4C1D95 0%, #7C3AED 100%)
+                                        : @linear-gradient(135deg, #0369A1 0%, #00D2FF 100%);
+                                    border-width: 1px;
+                                    border-color: #ffffff40;
+                                    TypeIcon {
+                                        x: 9px;
+                                        y: 9px;
+                                        width: 22px;
+                                        height: 22px;
+                                        kind: root.kind;
+                                    }
+                                }
+                            }
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                alignment: center;
+                                spacing: 2px;
+                                Text {
+                                    horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                                    text: root.name;
+                                    font-size: 14.5px * Theme.font-scale;
+                                    font-weight: 800;
+                                    color: #FFFFFF;
+                                    overflow: elide;
+                                }
+                                Text {
+                                    horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                                    text: root.url;
+                                    font-size: 10.5px * Theme.font-scale;
+                                    color: HudPalette.text-sub;
+                                    overflow: elide;
+                                }
+                            }
+                        }
+
+                        // Horizontal Glowing Progress Bar + Downloaded/Total Pill Badge
+                        HRow {
+                            spacing: 10px;
+                            VerticalLayout {
+                                alignment: center;
+                                horizontal-stretch: 1;
+                                Rectangle {
+                                    height: 14px;
+                                    border-radius: 7px;
+                                    border-width: 1px;
+                                    border-color: HudPalette.bar-border;
+                                    background: HudPalette.bar-track;
+
+                                    Rectangle {
+                                        x: Theme.rtl ? parent.width - 1px - self.width : 1px;
+                                        y: 1px;
+                                        height: parent.height - 2px;
+                                        width: max(0px, (parent.width - 2px) * clamp(root.progress, 0.0, 1.0));
+                                        border-radius: 6px;
+                                        background: HudPalette.bar-fill;
+                                        animate width { duration: 120ms; easing: linear; }
+                                    }
+
+                                    // Bright glowing leading tip
+                                    if root.progress > 0.01: Rectangle {
+                                        property <length> tip-pos: (parent.width - 6px) * clamp(root.progress, 0.0, 1.0);
+                                        x: Theme.rtl ? parent.width - 8px - self.tip-pos : self.tip-pos - 2px;
+                                        y: -1px;
+                                        width: 10px;
+                                        height: 16px;
+                                        border-radius: 5px;
+                                        background: HudPalette.bar-tip;
+                                        drop-shadow-blur: 10px;
+                                        drop-shadow-color: HudPalette.bar-glow;
+                                    }
+                                }
+                            }
+
+                            // Pill badge: Downloaded / Total Size
+                            Rectangle {
+                                height: 26px;
+                                width: badge-row.preferred-width + 20px;
+                                border-radius: 13px;
+                                border-width: 1px;
+                                border-color: HudPalette.bar-border;
+                                background: !HudPalette.blue ? #1B0C38EE : #081A36EE;
+                                badge-row := HRow {
+                                    alignment: center;
+                                    spacing: 4px;
+                                    Text {
+                                        text: root.downloaded-short;
+                                        vertical-alignment: center;
+                                        font-size: 11px * Theme.font-scale;
+                                        font-weight: 700;
+                                        color: HudPalette.blue ? #00FF87 : #FFFFFF;
+                                    }
+                                    Text {
+                                        text: "/ " + root.size;
+                                        vertical-alignment: center;
+                                        font-size: 11px * Theme.font-scale;
+                                        font-weight: 600;
+                                        color: HudPalette.text-sub;
+                                    }
+                                    if !HudPalette.blue: VerticalLayout {
+                                        alignment: center;
+                                        HudVectorIcon {
+                                            width: 12px;
+                                            height: 12px;
+                                            kind: "bolt";
+                                            tint: #E879F9;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Stats Row:
+                        // Cyber Purple -> 4 rounded glassmorphic cards
+                        if !HudPalette.blue: HRow {
+                            spacing: 8px;
+                            HudStatBox {
+                                icon: "floppy";
+                                label: @tr("File size");
+                                value: root.size;
+                                boxed: true;
+                            }
+                            HudStatBox {
+                                icon: "tray-dl";
+                                label: @tr("Downloaded");
+                                value: root.downloaded;
+                                boxed: true;
+                            }
+                            HudStatBox {
+                                icon: "bolt";
+                                icon-color: HudPalette.bolt-tint;
+                                label: @tr("Transfer rate");
+                                value: root.speed;
+                                boxed: true;
+                            }
+                            HudStatBox {
+                                icon: "clock";
+                                label: @tr("Time left");
+                                value: root.eta;
+                                boxed: true;
+                            }
+                        }
+
+                        // Neon Blue -> 5 clean stats with vertical cyan dividers
+                        if HudPalette.blue: HRow {
+                            spacing: 2px;
+                            HudStatBox {
+                                icon: "floppy";
+                                label: @tr("File size");
+                                value: root.size;
+                                boxed: false;
+                            }
+                            Rectangle { width: 1px; background: #00D2FF30; }
+                            HudStatBox {
+                                icon: "tray-dl";
+                                label: @tr("Downloaded");
+                                value: root.downloaded;
+                                boxed: false;
+                            }
+                            Rectangle { width: 1px; background: #00D2FF30; }
+                            HudStatBox {
+                                icon: "bolt";
+                                icon-color: #00FF87;
+                                label: @tr("Transfer rate");
+                                value: root.speed;
+                                value-color: #00FF87;
+                                boxed: false;
+                            }
+                            Rectangle { width: 1px; background: #00D2FF30; }
+                            HudStatBox {
+                                icon: "clock";
+                                label: @tr("Time left");
+                                value: root.eta;
+                                boxed: false;
+                            }
+                            Rectangle { width: 1px; background: #00D2FF30; }
+                            HudStatBox {
+                                icon: "resume-ring";
+                                label: @tr("Resume capability");
+                                value: root.resumable;
+                                value-color: root.resumable-ok ? #00FF87 : #FF6B62;
+                                boxed: false;
+                            }
+                        }
+
+                        if root.error != "": Text {
+                            horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                            text: root.error;
+                            color: #FF6B62;
+                            wrap: word-wrap;
+                            font-size: 11px * Theme.font-scale;
+                        }
+                    }
+                }
+
+                // TAB 1: Speed Limiter (intact backend bindings)
+                if root.tab == 1: VerticalLayout {
+                    padding: 16px;
+                    spacing: 12px;
+                    alignment: start;
+                    HRow {
+                        spacing: 8px;
+                        Text {
+                            horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                            text: @tr("Transfer rate");
+                            color: HudPalette.text-sub;
+                            vertical-alignment: center;
+                        }
+                        Text {
+                            horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                            text: root.speed;
+                            color: HudPalette.speed-highlight;
+                            font-weight: 700;
+                            vertical-alignment: center;
+                        }
+                    }
+                    CheckBox {
+                        text: @tr("Use speed limiter for this download");
+                        checked <=> root.limit-on;
+                        toggled => { root.limit-changed(); }
+                    }
+                    HRow {
+                        spacing: 8px;
+                        Text {
+                            horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                            text: @tr("Maximum download speed (KB/s)");
+                            color: root.limit-on ? #FFFFFF : HudPalette.text-dim;
+                            vertical-alignment: center;
+                        }
+                        SpinBox {
+                            width: 140px;
+                            enabled: root.limit-on;
+                            minimum: 1;
+                            maximum: 1000000;
+                            step-size: 50;
+                            value <=> root.limit-kb;
+                            edited(v) => { root.limit-changed(); }
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                    }
+                    HRow {
+                        spacing: 6px;
+                        for kb in [128, 256, 512, 1024, 2048, 5120]: Button {
+                            text: kb >= 1024 ? @tr("{} MB/s", kb / 1024) : @tr("{} KB/s", kb);
+                            clicked => {
+                                root.limit-on = true;
+                                root.limit-kb = kb;
+                                root.limit-changed();
+                            }
+                        }
+                    }
+                    Text {
+                        horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                        text: @tr("Changes apply right away, even while downloading.");
+                        font-size: 11px * Theme.font-scale;
+                        color: HudPalette.text-sub;
+                    }
+                }
+
+                // TAB 2: Options on completion (intact backend bindings)
+                if root.tab == 2: VerticalLayout {
+                    padding: 16px;
+                    spacing: 12px;
+                    alignment: start;
+                    Text {
+                        horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                        text: @tr("When this download completes:");
+                        color: #FFFFFF;
+                    }
+                    ComboBox {
+                        width: 320px;
+                        model: [@tr("Do nothing (keep the computer on)"), @tr("Shut down the computer"), @tr("Sleep"), @tr("Exit Qivora Download Manager"), @tr("Hibernate")];
+                        current-index <=> root.when-done;
+                        selected(v) => { root.completion-changed(); }
+                    }
+                    CheckBox {
+                        text: @tr("Force programs to close when shutting down");
+                        checked <=> root.force-close;
+                        enabled: root.when-done == 1;
+                        toggled => { root.completion-changed(); }
+                    }
+                    CheckBox {
+                        text: @tr("Show the \"Download complete\" window");
+                        checked <=> root.complete-dialog;
+                        toggled => { root.completion-changed(); }
+                    }
+                    Text {
+                        horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                        text: @tr("You get 30 seconds to cancel before the computer shuts down, sleeps or hibernates.");
+                        font-size: 11px * Theme.font-scale;
+                        color: HudPalette.text-sub;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+
+            // ---- Action Controls Pill Bar ----
+            Rectangle {
+                height: 44px;
+                border-radius: 12px;
+                border-width: 1px;
+                border-color: HudPalette.card-border;
+                background: HudPalette.card-bg;
+
+                HRow {
+                    padding-left: 10px;
+                    padding-right: 10px;
+                    spacing: 10px;
+
+                    VerticalLayout {
+                        alignment: center;
+                        HudPillButton {
+                            text: root.show-details ? @tr("<< Hide details") : @tr("Show details >>");
+                            glyph: root.show-details ? "caret-up" : "caret-down";
+                            glyph-tint: HudPalette.icon-tint;
+                            variant: "neutral";
+                            clicked => {
+                                root.show-details = !root.show-details;
+                                root.details-toggled();
+                            }
+                        }
+                    }
+
+                    Rectangle { horizontal-stretch: 1; }
+
+                    if root.state == 0 || root.state == 1: VerticalLayout {
+                        alignment: center;
+                        HudPillButton {
+                            text: @tr("Pause");
+                            glyph: "pause";
+                            variant: "pause";
+                            clicked => { root.pause(); }
+                        }
+                    }
+
+                    if root.state == 2 || root.state == 4: VerticalLayout {
+                        alignment: center;
+                        HudPillButton {
+                            text: @tr("Resume");
+                            glyph: "play";
+                            variant: "pause";
+                            clicked => { root.resume(); }
+                        }
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        HudPillButton {
+                            text: root.state == 3 ? @tr("Close") : @tr("Cancel");
+                            glyph: "close";
+                            glyph-tint: #FDA4AF;
+                            variant: "cancel";
+                            clicked => {
+                                if (root.state == 3) {
+                                    root.close-window();
+                                } else {
+                                    root.cancel-download();
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 1px;
+                        background: HudPalette.stat-border;
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        HudPillButton {
+                            text: @tr("More") + " ▾";
+                            variant: "neutral";
+                            clicked => {
+                                root.theme-menu-open = false;
+                                root.more-open = !root.more-open;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ---- Connections Section ----
+            if root.show-details: VerticalLayout {
+                vertical-stretch: 1;
+                spacing: 6px;
+
+                // Label row
+                HRow {
+                    alignment: center;
+                    spacing: 6px;
+                    VerticalLayout {
+                        alignment: center;
+                        HudVectorIcon {
+                            width: 14px;
+                            height: 14px;
+                            kind: "bars";
+                            tint: HudPalette.icon-tint;
+                        }
+                    }
+                    Text {
+                        text: @tr("Start positions and download progress by connections");
+                        font-size: 11px * Theme.font-scale;
+                        font-weight: 600;
+                        color: HudPalette.text-sub;
+                        vertical-alignment: center;
+                    }
+                }
+
+                // Multi-segment Glowing Progress Bar
+                Rectangle {
+                    height: 20px;
+                    border-radius: 7px;
+                    border-width: 1px;
+                    border-color: HudPalette.card-border;
+                    background: HudPalette.bar-track;
+                    clip: true;
+
+                    for s in root.segs: Rectangle {
+                        property <int> slot: Math.mod(s.idx, 3);
+                        x: Theme.rtl
+                            ? parent.width - 2px - (parent.width - 4px) * s.start - self.width
+                            : 2px + (parent.width - 4px) * s.start;
+                        y: 2px;
+                        width: max(0px, (parent.width - 4px) * (s.done - s.start));
+                        height: parent.height - 4px;
+                        border-radius: 4px;
+                        background: !HudPalette.blue
+                            ? (self.slot == 0
+                                ? @linear-gradient(90deg, #7C3AED 0%, #C084FC 100%)
+                                : self.slot == 1
+                                    ? @linear-gradient(90deg, #9333EA 0%, #E879F9 100%)
+                                    : @linear-gradient(90deg, #6D28D9 0%, #F472B6 100%))
+                            : (self.slot == 0
+                                ? @linear-gradient(90deg, #0284C7 0%, #00D2FF 100%)
+                                : self.slot == 1
+                                    ? @linear-gradient(90deg, #00B4DB 0%, #00FF87 100%)
+                                    : @linear-gradient(90deg, #2563EB 0%, #38BDF8 100%));
+                        animate width { duration: 100ms; easing: linear; }
+                    }
+
+                    // Segment start markers
+                    for s in root.segs: Rectangle {
+                        x: Theme.rtl
+                            ? parent.width - 2px - (parent.width - 4px) * s.start
+                            : 2px + (parent.width - 4px) * s.start;
+                        y: 2px;
+                        width: 1.5px;
+                        height: parent.height - 4px;
+                        background: !HudPalette.blue ? #F0ABFC88 : #00FF8788;
+                    }
+                }
+
+                // Dark Scrollable Connections Table + Styled Scrollbar
+                Rectangle {
+                    min-height: 132px;
+                    preferred-height: 158px;
+                    vertical-stretch: 1;
+                    border-radius: 10px;
+                    border-width: 1px;
+                    border-color: HudPalette.card-border;
+                    background: HudPalette.table-bg;
+                    clip: true;
+
+                    VerticalLayout {
+                        spacing: 0px;
+
+                        // Table Header
+                        Rectangle {
+                            height: 26px;
+                            background: HudPalette.table-head;
+                            HRow {
+                                padding-left: 10px;
+                                padding-right: 18px;
+                                Text {
+                                    text: @tr("N.");
+                                    width: 54px;
+                                    vertical-alignment: center;
+                                    font-size: 11px * Theme.font-scale;
+                                    font-weight: 700;
+                                    color: #FFFFFF;
+                                }
+                                Text {
+                                    text: @tr("Downloaded");
+                                    width: 135px;
+                                    vertical-alignment: center;
+                                    font-size: 11px * Theme.font-scale;
+                                    font-weight: 700;
+                                    color: #FFFFFF;
+                                    horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                                }
+                                Text {
+                                    text: @tr("Info");
+                                    horizontal-stretch: 1;
+                                    vertical-alignment: center;
+                                    font-size: 11px * Theme.font-scale;
+                                    font-weight: 700;
+                                    color: #FFFFFF;
+                                    horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                                }
+                            }
+                        }
+
+                        // Rows + Custom Neon Scrollbar Track
+                        Rectangle {
+                            vertical-stretch: 1;
+
+                            seg-lv := ListView {
+                                width: parent.width - 12px;
+                                height: parent.height;
+                                for s[idx] in root.segs: Rectangle {
+                                    height: 23px;
+                                    background: Math.mod(idx, 2) == 1 ? HudPalette.row-alt : transparent;
+
+                                    HRow {
+                                        padding-left: 10px;
+                                        padding-right: 8px;
+
+                                        // N. + Glowing Status Dot
+                                        HRow {
+                                            width: 54px;
+                                            spacing: 8px;
+                                            Text {
+                                                text: s.number;
+                                                width: 20px;
+                                                vertical-alignment: center;
+                                                font-size: 11px * Theme.font-scale;
+                                                font-weight: 600;
+                                                color: #E2E8F0;
+                                            }
+                                            VerticalLayout {
+                                                alignment: center;
+                                                Rectangle {
+                                                    property <color> dot-c: s.finished || (idx < 2 && s.busy)
+                                                        ? #22C55E
+                                                        : s.busy ? #38BDF8 : #64748B;
+                                                    width: 8px;
+                                                    height: 8px;
+                                                    border-radius: 4px;
+                                                    background: self.dot-c;
+                                                    drop-shadow-blur: 6px;
+                                                    drop-shadow-color: self.dot-c;
+                                                }
+                                            }
+                                        }
+
+                                        // Downloaded
+                                        Text {
+                                            text: s.downloaded;
+                                            width: 135px;
+                                            vertical-alignment: center;
+                                            font-size: 11px * Theme.font-scale;
+                                            font-weight: 600;
+                                            color: #FFFFFF;
+                                            horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                                            overflow: elide;
+                                        }
+
+                                        // Info (+ Neon Blue signal bars icon)
+                                        HRow {
+                                            horizontal-stretch: 1;
+                                            spacing: 6px;
+                                            if HudPalette.blue: VerticalLayout {
+                                                alignment: center;
+                                                HudVectorIcon {
+                                                    width: 13px;
+                                                    height: 13px;
+                                                    kind: "bars";
+                                                    tint: s.busy || s.finished ? #00FF87 : #64748B;
+                                                }
+                                            }
+                                            Text {
+                                                text: s.info;
+                                                horizontal-stretch: 1;
+                                                vertical-alignment: center;
+                                                font-size: 11px * Theme.font-scale;
+                                                color: s.busy ? #FFFFFF : HudPalette.text-sub;
+                                                horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                                                overflow: elide;
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        y: parent.height - 1px;
+                                        width: parent.width;
+                                        height: 1px;
+                                        background: HudPalette.row-line;
+                                    }
+                                }
+                            }
+
+                            // Styled purple / cyan scrollbar indicator bar on the right
+                            Rectangle {
+                                x: Theme.rtl ? 0px : parent.width - 12px;
+                                y: 0px;
+                                width: 12px;
+                                height: parent.height;
+                                background: HudPalette.scroll-track;
+                                Rectangle {
+                                    property <float> ratio: clamp(seg-lv.visible-height / max(1px, seg-lv.viewport-height), 0.15, 1.0);
+                                    property <float> pos: clamp(-seg-lv.viewport-y / max(1px, seg-lv.viewport-height - seg-lv.visible-height), 0.0, 1.0);
+                                    x: 2px;
+                                    width: 8px;
+                                    height: max(22px, (parent.height - 8px) * self.ratio);
+                                    y: 4px + (parent.height - 8px - self.height) * self.pos;
+                                    border-radius: 4px;
+                                    background: HudPalette.scroll-thumb;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ==================== 3. BOTTOM STATUS FOOTER ====================
+        Rectangle {
+            height: 30px;
+            background: HudPalette.footer-bg;
+
+            Rectangle {
+                y: 0;
+                width: parent.width;
+                height: 1px;
+                background: HudPalette.header-line;
+            }
+
+            HRow {
+                padding-left: 12px;
+                padding-right: 12px;
+                spacing: 10px;
+
+                // Internet Connection
+                HRow {
+                    spacing: 5px;
+                    VerticalLayout {
+                        alignment: center;
+                        HudVectorIcon {
+                            width: 13px;
+                            height: 13px;
+                            kind: "bolt";
+                            tint: #FBBF24;
+                        }
+                    }
+                    Text {
+                        text: @tr("Internet Connection:") + " ";
+                        vertical-alignment: center;
+                        font-size: 10.5px * Theme.font-scale;
+                        color: HudPalette.text-sub;
+                    }
+                    Text {
+                        text: root.conn-status;
+                        vertical-alignment: center;
+                        font-size: 10.5px * Theme.font-scale;
+                        font-weight: 700;
+                        color: root.conn-online ? HudPalette.speed-highlight : #FBBF24;
+                    }
+                }
+
+                VerticalLayout {
+                    alignment: center;
+                    Rectangle { width: 1px; height: 14px; background: HudPalette.stat-border; }
+                }
+
+                // Live Download Speed
+                HRow {
+                    spacing: 5px;
+                    VerticalLayout {
+                        alignment: center;
+                        HudVectorIcon {
+                            width: 13px;
+                            height: 13px;
+                            kind: "gauge";
+                            tint: HudPalette.icon-tint;
+                        }
+                    }
+                    Text {
+                        text: @tr("Download Speed:") + " ";
+                        vertical-alignment: center;
+                        font-size: 10.5px * Theme.font-scale;
+                        color: HudPalette.text-sub;
+                    }
+                    Text {
+                        text: root.speed;
+                        vertical-alignment: center;
+                        font-size: 10.5px * Theme.font-scale;
+                        font-weight: 700;
+                        color: HudPalette.speed-highlight;
+                    }
+                }
+
+                VerticalLayout {
+                    alignment: center;
+                    Rectangle { width: 1px; height: 14px; background: HudPalette.stat-border; }
+                }
+
+                // Total Downloaded
+                HRow {
+                    spacing: 5px;
+                    VerticalLayout {
+                        alignment: center;
+                        HudVectorIcon {
+                            width: 13px;
+                            height: 13px;
+                            kind: "bars";
+                            tint: HudPalette.icon-tint;
+                        }
+                    }
+                    Text {
+                        text: @tr("Total Downloaded:") + " ";
+                        vertical-alignment: center;
+                        font-size: 10.5px * Theme.font-scale;
+                        color: HudPalette.text-sub;
+                    }
+                    Text {
+                        text: root.downloaded-short;
+                        vertical-alignment: center;
+                        font-size: 10.5px * Theme.font-scale;
+                        font-weight: 700;
+                        color: #FFFFFF;
+                    }
+                }
+
+                Rectangle { horizontal-stretch: 1; }
+
+                // Right Badge
+                VerticalLayout {
+                    alignment: center;
+                    Rectangle {
+                        height: 20px;
+                        width: brand-row.preferred-width + 14px;
+                        border-radius: 10px;
+                        border-width: 1px;
+                        border-color: HudPalette.card-border;
+                        background: !HudPalette.blue ? #1E0D3E : #091D3E;
+                        brand-row := HRow {
+                            alignment: center;
+                            spacing: 4px;
+                            VerticalLayout {
+                                alignment: center;
+                                HudVectorIcon { width: 12px; height: 12px; kind: "crown"; }
+                            }
+                            Text {
+                                text: "Qivora";
+                                vertical-alignment: center;
+                                font-size: 10px * Theme.font-scale;
+                                font-weight: 700;
+                                color: #FFFFFF;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // "More ▾" Popover Menu Overlay
+    if root.more-open: TouchArea {
+        width: parent.width;
+        height: parent.height;
+        clicked => { root.more-open = false; }
+    }
+    if root.more-open: Rectangle {
+        x: Theme.rtl ? 14px : parent.width - 208px;
+        y: 266px;
+        width: 194px;
+        height: more-col.preferred-height;
+        border-radius: 10px;
+        border-width: 1px;
+        border-color: HudPalette.card-border;
+        background: !HudPalette.blue ? #160930F8 : #081833F8;
+        drop-shadow-blur: 14px;
+        drop-shadow-color: #00000088;
+        TouchArea { }
+        more-col := VerticalLayout {
+            padding: 6px;
+            spacing: 2px;
+            for item[idx] in [
+                @tr("Open folder"),
+                @tr("Play while downloading"),
+                @tr("Hide next to the clock"),
+                @tr("Speed Limiter"),
+                @tr("Options on completion")
+            ]: Rectangle {
+                height: 28px;
+                border-radius: 6px;
+                background: mta.has-hover ? #ffffff16 : transparent;
+                mta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.more-open = false;
+                        if (idx == 0) { root.open-folder(); }
+                        else if (idx == 1) { root.play-preview(); }
+                        else if (idx == 2) { root.hide-to-tray(); }
+                        else if (idx == 3) { root.tab = 1; }
+                        else if (idx == 4) { root.tab = 2; }
+                    }
+                }
+                Text {
+                    x: 10px;
+                    width: parent.width - 20px;
+                    height: parent.height;
+                    text: item;
+                    vertical-alignment: center;
+                    horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                    font-size: 11.5px * Theme.font-scale;
+                    color: #FFFFFF;
+                }
+            }
+        }
+    }
+}

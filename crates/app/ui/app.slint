@@ -4,6 +4,7 @@
 
 import { Button, LineEdit, SpinBox, ComboBox, ListView, TabWidget, TextEdit, Palette } from "std-widgets.slint";
 import { ToolTip, DownloadRow, QueueRow, SegView, Cols, ColDef, CatRow, PairRow, LinkRow, Theme, ThemedWindow, CaptionButton, P, Icon, G, TypeIcon, BigTypeIcon, ToolBtn, ToolSeparator, TreeItem, HeaderCell, Cell, MenuEntry, MenuSep, MenuLabel, Glyph, HRow, CheckBox } from "common.slint";
+import { HudPalette, ThemePaletteButton, ThemeSelectorCard, HudDetailsView } from "hud_themes.slint";
 export { DownloadRow, QueueRow, SegView, Cols, ColDef, CatRow, PairRow, LinkRow, Theme }
 export { BrowserRow } from "dialogs.slint";
 export { ConfirmDialog, ColumnsDialog, CategoryDialog, FindDialog, PropertiesDialog, DuplicateDialog, CountdownDialog, SchedulerDialog, GrabberDialog, TipDialog, RefreshDialog, SettingsDialog, PlaylistDialog, TorrentDialog, BrowserDialog, AboutDialog, UpdateDialog, WhatsNewDialog } from "dialogs.slint";
@@ -569,6 +570,7 @@ export component MainWindow inherits ThemedWindow {
     callback export-list(string);
     callback import-list(string);
     callback set-theme(int);
+    callback set-hud-theme(int);
     callback set-language(string);
     callback toggle-categories();
     callback set-toolbar-small(bool);
@@ -999,7 +1001,26 @@ export component MainWindow inherits ThemedWindow {
             Menu {
                 title: @tr("Theme");
                 MenuItem {
-                    title: (Theme.mode == 0 ? "● " : "○ ") + @tr("Light");
+                    title: (Theme.hud-theme == 0 && Theme.mode == 0 ? "● " : "○ ") + @tr("Classic (Default)");
+                    activated => {
+                        root.set-hud-theme(0);
+                    }
+                }
+                MenuItem {
+                    title: (Theme.hud-theme == 1 ? "● " : "○ ") + @tr("Cyber Purple (Neon Dark)");
+                    activated => {
+                        root.set-hud-theme(1);
+                    }
+                }
+                MenuItem {
+                    title: (Theme.hud-theme == 2 ? "● " : "○ ") + @tr("Neon Blue (Space Dark)");
+                    activated => {
+                        root.set-hud-theme(2);
+                    }
+                }
+                MenuSeparator { }
+                MenuItem {
+                    title: (Theme.mode == 0 && Theme.hud-theme == 0 ? "● " : "○ ") + @tr("Light");
                     activated => {
                         root.set-theme(0);
                     }
@@ -1364,26 +1385,40 @@ export component MainWindow inherits ThemedWindow {
                         VerticalLayout {
                             alignment: center;
                             theme-toggle := Rectangle {
-                                width: 28px;
+                                width: 30px;
                                 height: 28px;
                                 border-radius: 6px;
                                 border-width: 1px;
                                 border-color: theme-ta.has-hover ? Theme.select-line : Theme.line;
                                 background: theme-ta.pressed ? Theme.select : theme-ta.has-hover ? Theme.toolbar-hover : Theme.input-bg;
+                                animate background, border-color { duration: 200ms; easing: ease-in-out; }
                                 Glyph {
                                     x: (parent.width - 16px) / 2;
                                     y: (parent.height - 16px) / 2;
-                                    kind: Theme.dark ? "sun" : "moon";
+                                    kind: "palette";
                                     tint: Theme.accent;
                                 }
+                                main-theme-popup := PopupWindow {
+                                    x: Theme.rtl ? 0px : parent.width - 256px;
+                                    y: parent.height + 4px;
+                                    width: 256px;
+                                    height: 168px;
+                                    ThemeSelectorCard {
+                                        current-hud-theme: Theme.hud-theme;
+                                        pick-theme(idx) => {
+                                            root.set-hud-theme(idx);
+                                        }
+                                    }
+                                }
                                 theme-ta := TouchArea {
+                                    mouse-cursor: pointer;
                                     clicked => {
-                                        root.set-theme(Theme.dark ? 0 : 1);
+                                        main-theme-popup.show();
                                     }
                                     changed has-hover => {
                                         if (self.has-hover) {
-                                            ToolTip.title = Theme.dark ? @tr("Light") : @tr("Dark");
-                                            ToolTip.text = @tr("Theme");
+                                            ToolTip.title = @tr("Theme");
+                                            ToolTip.text = @tr("Switch between Classic, Cyber Purple, and Neon Blue");
                                             ToolTip.x = theme-toggle.absolute-position.x;
                                             ToolTip.y = theme-toggle.absolute-position.y + theme-toggle.height + 4px;
                                             ToolTip.shown = false;
@@ -2400,23 +2435,36 @@ export component BatchDialog inherits ThemedWindow {
     }
 }
 
-// The per-download progress window (tabs like a classic download manager).
+// The per-download progress window (supports 3 switchable themes: Classic, Cyber Purple, Neon Blue).
 export component DetailsDialog inherits ThemedWindow {
     // set for a moment so the window comes in front of the browser
     in property <bool> front;
     always-on-top: root.front;
     title: root.percent + " " + root.name;
-    preferred-width: 560px;
-    min-width: 520px;
-    // its own title bar (with "hide next to the clock" beside minimize)
+
+    property <bool> is-hud: Theme.hud-theme == 1 || Theme.hud-theme == 2;
+    property <bool> theme-menu-open: false;
+
+    // Ensure standard widgets inside DetailsDialog follow Classic Light vs Dark HUD
+    changed is-hud => {
+        Palette.color-scheme = self.is-hud ? ColorScheme.dark : ColorScheme.light;
+    }
+
+    preferred-width: root.is-hud ? 760px : 560px;
+    min-width: root.is-hud ? 660px : 520px;
+    min-height: root.show-details ? (root.is-hud ? 510px : 400px) : (root.is-hud ? 335px : 260px);
+    background: root.is-hud ? #080514 : #f4f7fb;
+    // its own title bar (with theme switcher and "hide next to the clock" beside minimize)
     no-frame: true;
 
     in property <string> name;
     in property <string> percent;
+    in property <string> percent-precise: root.percent;
     in property <string> url;
     in property <string> status;
     in property <string> size;
     in property <string> downloaded;
+    in property <string> downloaded-short: root.downloaded;
     in property <string> speed;
     in property <string> eta;
     in property <string> resumable;
@@ -2426,6 +2474,9 @@ export component DetailsDialog inherits ThemedWindow {
     in property <float> progress;
     in property <int> state;
     in property <[SegView]> segs;
+    in property <string> conn-status: "Fast";
+    in property <bool> conn-online: true;
+    in property <string> app-version: "1.0.8";
     in-out property <bool> show-details: true;
     in-out property <int> tab: 0;
     // speed limiter tab
@@ -2443,34 +2494,51 @@ export component DetailsDialog inherits ThemedWindow {
     callback hide-to-tray();
     callback limit-changed();
     callback completion-changed();
-    // title bar: move the window / minimize / the X
+    // title bar: move the window / minimize / the X / switch theme
     callback start-drag();
     callback minimize();
     callback close-clicked();
     callback start-resize();
+    callback select-hud-theme(int);
+    callback open-folder();
+    callback play-preview();
     // "Hide details" / "Show details": the window takes the size it needs
-    out property <length> content-height: outer.preferred-height;
+    out property <length> content-height: root.is-hud ? hud-view.preferred-total-height : outer.preferred-height;
     callback details-toggled();
 
     property <bool> tray-tip;
+    property <bool> any-tray-hover: root.is-hud ? hud-view.tray-hovered : tray-btn.hovered;
+    changed any-tray-hover => {
+        if (!self.any-tray-hover) {
+            root.tray-tip = false;
+        }
+    }
     tip-timer := Timer {
         interval: 600ms;
-        running: tray-btn.hovered && !root.tray-tip;
+        running: root.any-tray-hover && !root.tray-tip;
         triggered => {
             root.tray-tip = true;
         }
     }
 
+    // ==================== THEME 1: CLASSIC (EXACT EXISTING LIGHT UI) ====================
     Rectangle {
+        visible: !root.is-hud;
+        width: root.width;
+        height: root.height;
+        background: #f4f7fb;
         border-width: 1px;
-        border-color: Theme.line;
+        border-color: #d8e1ee;
     }
     outer := VerticalLayout {
+      visible: !root.is-hud;
+      width: root.width;
+      height: root.height;
       padding: 1px;
       spacing: 0px;
       Rectangle {
         height: 30px;
-        background: Theme.panel;
+        background: #ffffff;
         HRow {
             spacing: 0px;
             Rectangle {
@@ -2500,20 +2568,22 @@ export component DetailsDialog inherits ThemedWindow {
                         text: root.title;
                         vertical-alignment: center;
                         overflow: elide;
-                        color: Theme.text;
+                        color: #0f172a;
                         horizontal-stretch: 1;
                     }
+                }
+            }
+            ThemePaletteButton {
+                is-hud: false;
+                active-open: root.theme-menu-open;
+                clicked => {
+                    root.theme-menu-open = !root.theme-menu-open;
                 }
             }
             tray-btn := CaptionButton {
                 kind: "tray";
                 visible: root.state != 3;
                 width: root.state != 3 ? 44px : 0px;
-                changed hovered => {
-                    if (!self.hovered) {
-                        root.tray-tip = false;
-                    }
-                }
                 clicked => {
                     root.tray-tip = false;
                     root.hide-to-tray();
@@ -2534,29 +2604,39 @@ export component DetailsDialog inherits ThemedWindow {
         }
       }
       VerticalLayout {
+        vertical-stretch: 1;
         padding: 10px;
         spacing: 0px;
         HRow {
             spacing: 2px;
-            TabButton {
-                text: @tr("Download status");
-                active: root.tab == 0;
-                clicked => {
-                    root.tab = 0;
+            for tab-title[idx] in [@tr("Download status"), @tr("Speed Limiter"), @tr("Options on completion")]: Rectangle {
+                property <bool> act: root.tab == idx;
+                height: 26px;
+                width: cl-lbl.preferred-width + 24px;
+                background: self.act ? #ffffff : cl-ta.has-hover ? #e8f2ff : #f4f7fb;
+                border-width: 1px;
+                border-color: #d8e1ee;
+                cl-ta := TouchArea {
+                    clicked => {
+                        root.tab = idx;
+                    }
                 }
-            }
-            TabButton {
-                text: @tr("Speed Limiter");
-                active: root.tab == 1;
-                clicked => {
-                    root.tab = 1;
+                cl-lbl := Text {
+                    width: parent.width;
+                    height: parent.height;
+                    text: tab-title;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    font-size: 12px * Theme.font-scale;
+                    font-weight: parent.act ? 600 : 400;
+                    color: #0f172a;
                 }
-            }
-            TabButton {
-                text: @tr("Options on completion");
-                active: root.tab == 2;
-                clicked => {
-                    root.tab = 2;
+                if self.act: Rectangle {
+                    x: 1px;
+                    y: parent.height - 1px;
+                    width: parent.width - 2px;
+                    height: 2px;
+                    background: #ffffff;
                 }
             }
             Rectangle {
@@ -2564,10 +2644,11 @@ export component DetailsDialog inherits ThemedWindow {
             }
         }
         Rectangle {
-            background: Theme.panel;
+            background: #ffffff;
             border-width: 1px;
-            border-color: Theme.line;
+            border-color: #d8e1ee;
             min-height: 176px;
+            vertical-stretch: root.show-details ? 0 : 1;
             if root.tab == 0: VerticalLayout {
                 padding: 10px;
                 spacing: 6px;
@@ -2584,14 +2665,14 @@ export component DetailsDialog inherits ThemedWindow {
                         text: root.url;
                         font-size: 11px * Theme.font-scale;
                         overflow: elide;
-                        color: Theme.accent;
+                        color: #0066ff;
                         vertical-alignment: center;
                         horizontal-stretch: 1;
                     }
                 }
                 Rectangle {
                     height: 1px;
-                    background: Theme.grid;
+                    background: #edf1f7;
                 }
                 VerticalLayout {
                     spacing: 3px;
@@ -2600,13 +2681,13 @@ export component DetailsDialog inherits ThemedWindow {
                         Text {
                             horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                             text: @tr("Status");
-                            color: Theme.muted;
+                            color: #526277;
                             width: 125px;
                         }
                         Text {
                             horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                             text: root.status;
-                            color: root.state == 4 ? Theme.err : Theme.text;
+                            color: root.state == 4 ? #d23b32 : #0f172a;
                             horizontal-stretch: 1;
                             overflow: elide;
                         }
@@ -2616,13 +2697,13 @@ export component DetailsDialog inherits ThemedWindow {
                         Text {
                             horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                             text: @tr("File size");
-                            color: Theme.muted;
+                            color: #526277;
                             width: 125px;
                         }
                         Text {
                             horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                             text: root.size;
-                            color: Theme.text;
+                            color: #0f172a;
                             horizontal-stretch: 1;
                             overflow: elide;
                         }
@@ -2632,13 +2713,13 @@ export component DetailsDialog inherits ThemedWindow {
                         Text {
                             horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                             text: @tr("Downloaded");
-                            color: Theme.muted;
+                            color: #526277;
                             width: 125px;
                         }
                         Text {
                             horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                             text: root.downloaded;
-                            color: Theme.text;
+                            color: #0f172a;
                             horizontal-stretch: 1;
                             overflow: elide;
                         }
@@ -2648,13 +2729,13 @@ export component DetailsDialog inherits ThemedWindow {
                         Text {
                             horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                             text: @tr("Transfer rate");
-                            color: Theme.muted;
+                            color: #526277;
                             width: 125px;
                         }
                         Text {
                             horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                             text: root.speed;
-                            color: Theme.text;
+                            color: #0f172a;
                             horizontal-stretch: 1;
                             overflow: elide;
                         }
@@ -2664,13 +2745,13 @@ export component DetailsDialog inherits ThemedWindow {
                         Text {
                             horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                             text: @tr("Time left");
-                            color: Theme.muted;
+                            color: #526277;
                             width: 125px;
                         }
                         Text {
                             horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                             text: root.eta;
-                            color: Theme.text;
+                            color: #0f172a;
                             horizontal-stretch: 1;
                             overflow: elide;
                         }
@@ -2680,13 +2761,13 @@ export component DetailsDialog inherits ThemedWindow {
                         Text {
                             horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                             text: @tr("Resume capability");
-                            color: Theme.muted;
+                            color: #526277;
                             width: 125px;
                         }
                         Text {
                             horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                             text: root.resumable;
-                            color: root.resumable-ok ? Theme.ok : Theme.err;
+                            color: root.resumable-ok ? #1f9d55 : #d23b32;
                             horizontal-stretch: 1;
                             overflow: elide;
                         }
@@ -2695,7 +2776,7 @@ export component DetailsDialog inherits ThemedWindow {
                 if root.error != "": Text {
                     horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                     text: root.error;
-                    color: Theme.err;
+                    color: #d23b32;
                     wrap: word-wrap;
                     font-size: 11px * Theme.font-scale;
                 }
@@ -2709,13 +2790,13 @@ export component DetailsDialog inherits ThemedWindow {
                     Text {
                         horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                         text: @tr("Transfer rate");
-                        color: Theme.muted;
+                        color: #526277;
                         vertical-alignment: center;
                     }
                     Text {
                         horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                         text: root.speed;
-                        color: Theme.text;
+                        color: #0f172a;
                         font-weight: 600;
                         vertical-alignment: center;
                     }
@@ -2732,7 +2813,7 @@ export component DetailsDialog inherits ThemedWindow {
                     Text {
                         horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                         text: @tr("Maximum download speed (KB/s)");
-                        color: root.limit-on ? Theme.text : Theme.muted;
+                        color: root.limit-on ? #0f172a : #526277;
                         vertical-alignment: center;
                     }
                     SpinBox {
@@ -2765,7 +2846,7 @@ export component DetailsDialog inherits ThemedWindow {
                     horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                     text: @tr("Changes apply right away, even while downloading.");
                     font-size: 11px * Theme.font-scale;
-                    color: Theme.muted;
+                    color: #526277;
                 }
             }
             if root.tab == 2: VerticalLayout {
@@ -2775,7 +2856,7 @@ export component DetailsDialog inherits ThemedWindow {
                 Text {
                     horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                     text: @tr("When this download completes:");
-                    color: Theme.text;
+                    color: #0f172a;
                 }
                 ComboBox {
                     width: 300px;
@@ -2804,7 +2885,7 @@ export component DetailsDialog inherits ThemedWindow {
                     horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                     text: @tr("You get 30 seconds to cancel before the computer shuts down, sleeps or hibernates.");
                     font-size: 11px * Theme.font-scale;
-                    color: Theme.muted;
+                    color: #526277;
                     wrap: word-wrap;
                 }
             }
@@ -2815,8 +2896,8 @@ export component DetailsDialog inherits ThemedWindow {
         Rectangle {
             height: 18px;
             border-width: 1px;
-            border-color: Theme.line;
-            background: Theme.bar-bg;
+            border-color: #d8e1ee;
+            background: #e2e8f0;
             clip: true;
             Rectangle {
                 x: Theme.rtl ? parent.width - 1px - self.width : 1px;
@@ -2870,26 +2951,27 @@ export component DetailsDialog inherits ThemedWindow {
             }
         }
         if root.show-details: VerticalLayout {
+            vertical-stretch: 1;
             spacing: 6px;
             padding-top: 8px;
             Text {
                 horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                 text: @tr("Start positions and download progress by connections");
                 font-size: 11px * Theme.font-scale;
-                color: Theme.muted;
+                color: #526277;
             }
             Rectangle {
                 height: 20px;
                 border-width: 1px;
-                border-color: Theme.line;
-                background: Theme.panel;
+                border-color: #d8e1ee;
+                background: #ffffff;
                 clip: true;
                 for s in root.segs: Rectangle {
                     x: Theme.rtl ? parent.width - 1px - (parent.width - 2px) * s.start - self.width : 1px + (parent.width - 2px) * s.start;
                     y: 1px;
                     width: (parent.width - 2px) * (s.done - s.start);
                     height: parent.height - 2px;
-                    background: Theme.accent;
+                    background: #0066ff;
                     animate width {
                         duration: 100ms;
                         easing: linear;
@@ -2900,31 +2982,59 @@ export component DetailsDialog inherits ThemedWindow {
                     y: 0;
                     width: 1px;
                     height: parent.height;
-                    background: Theme.err;
+                    background: #d23b32;
                 }
             }
             Rectangle {
-                height: 150px;
-                background: Theme.panel;
+                min-height: 130px;
+                preferred-height: 150px;
+                vertical-stretch: 1;
+                background: #ffffff;
                 border-width: 1px;
-                border-color: Theme.line;
+                border-color: #d8e1ee;
                 VerticalLayout {
                     padding: 1px;
                     Rectangle {
                         height: 22px;
-                        background: @linear-gradient(180deg, Theme.header-top 0%, Theme.header-bottom 100%);
+                        background: @linear-gradient(180deg, #ffffff 0%, #eef3f9 100%);
                         HRow {
-                            HeaderCell {
-                                text: @tr("N.");
+                            Rectangle {
                                 width: 34px;
+                                Text {
+                                    x: 6px;
+                                    width: parent.width - 12px;
+                                    height: parent.height;
+                                    text: @tr("N.");
+                                    vertical-alignment: center;
+                                    font-size: 12px * Theme.font-scale;
+                                    color: #0f172a;
+                                }
                             }
-                            HeaderCell {
-                                text: @tr("Downloaded");
+                            Rectangle {
                                 width: 110px;
+                                Text {
+                                    x: 6px;
+                                    width: parent.width - 12px;
+                                    height: parent.height;
+                                    text: @tr("Downloaded");
+                                    vertical-alignment: center;
+                                    horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                                    font-size: 12px * Theme.font-scale;
+                                    color: #0f172a;
+                                }
                             }
-                            HeaderCell {
-                                text: @tr("Info");
+                            Rectangle {
                                 horizontal-stretch: 1;
+                                Text {
+                                    x: 6px;
+                                    width: parent.width - 12px;
+                                    height: parent.height;
+                                    text: @tr("Info");
+                                    vertical-alignment: center;
+                                    horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                                    font-size: 12px * Theme.font-scale;
+                                    color: #0f172a;
+                                }
                             }
                         }
                     }
@@ -2933,20 +3043,31 @@ export component DetailsDialog inherits ThemedWindow {
                         for s in root.segs: Rectangle {
                             height: 19px;
                             HRow {
-                                Cell {
+                                Text {
                                     text: s.number;
                                     width: 34px;
+                                    vertical-alignment: center;
                                     horizontal-alignment: center;
+                                    font-size: 12px * Theme.font-scale;
+                                    color: #0f172a;
                                 }
-                                Cell {
+                                Text {
                                     text: " " + s.downloaded;
                                     width: 110px;
+                                    vertical-alignment: center;
                                     horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                                    font-size: 12px * Theme.font-scale;
+                                    color: #0f172a;
+                                    overflow: elide;
                                 }
-                                Cell {
+                                Text {
                                     text: s.info;
                                     horizontal-stretch: 1;
-                                    color: s.busy ? Theme.accent : Theme.muted;
+                                    vertical-alignment: center;
+                                    horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+                                    font-size: 12px * Theme.font-scale;
+                                    color: s.busy ? #0066ff : #526277;
+                                    overflow: elide;
                                 }
                             }
                         }
@@ -2954,24 +3075,94 @@ export component DetailsDialog inherits ThemedWindow {
                 }
             }
         }
+      }
     }
+
+    // ==================== THEMES 2 & 3: CYBER PURPLE & NEON BLUE HUD ====================
+    hud-view := HudDetailsView {
+        visible: root.is-hud;
+        width: root.width;
+        height: root.height;
+        name: root.name;
+        percent-precise: root.percent-precise;
+        url: root.url;
+        status: root.status;
+        size: root.size;
+        downloaded: root.downloaded;
+        downloaded-short: root.downloaded-short;
+        speed: root.speed;
+        eta: root.eta;
+        resumable: root.resumable;
+        resumable-ok: root.resumable-ok;
+        error: root.error;
+        kind: root.kind;
+        progress: root.progress;
+        state: root.state;
+        segs: root.segs;
+        conn-status: root.conn-status;
+        conn-online: root.conn-online;
+        app-version: root.app-version;
+        show-details <=> root.show-details;
+        tab <=> root.tab;
+        limit-on <=> root.limit-on;
+        limit-kb <=> root.limit-kb;
+        when-done <=> root.when-done;
+        complete-dialog <=> root.complete-dialog;
+        force-close <=> root.force-close;
+        theme-menu-open <=> root.theme-menu-open;
+
+        pause => { root.pause(); }
+        resume => { root.resume(); }
+        cancel-download => { root.cancel-download(); }
+        close-window => { root.close-window(); }
+        hide-to-tray => {
+            root.tray-tip = false;
+            root.hide-to-tray();
+        }
+        limit-changed => { root.limit-changed(); }
+        completion-changed => { root.completion-changed(); }
+        start-drag => { root.start-drag(); }
+        minimize => { root.minimize(); }
+        close-clicked => { root.close-clicked(); }
+        details-toggled => { root.details-toggled(); }
+        open-folder => { root.open-folder(); }
+        play-preview => { root.play-preview(); }
     }
+
+    // ==================== FLOATING THEME SWITCHER POPOVER ====================
+    if root.theme-menu-open: TouchArea {
+        width: root.width;
+        height: root.height;
+        clicked => {
+            root.theme-menu-open = false;
+        }
+    }
+    if root.theme-menu-open: ThemeSelectorCard {
+        x: Theme.rtl ? 12px : max(8px, root.width - self.width - 12px);
+        y: root.is-hud ? 48px : 32px;
+        current-hud-theme: Theme.hud-theme;
+        pick-theme(idx) => {
+            root.theme-menu-open = false;
+            root.select-hud-theme(idx);
+        }
+    }
+
     // the hint of the tray button
     if root.tray-tip: Rectangle {
         x: max(4px, root.width - 89px - tip-text.preferred-width - 16px);
-        y: 32px;
+        y: root.is-hud ? 48px : 32px;
         width: tip-text.preferred-width + 16px;
         height: tip-text.preferred-height + 10px;
-        background: Theme.input-bg;
+        background: root.is-hud ? #14092B : #ffffff;
         border-width: 1px;
-        border-color: Theme.line;
-        border-radius: 3px;
+        border-color: root.is-hud ? HudPalette.card-border : #d8e1ee;
+        border-radius: 4px;
         drop-shadow-blur: 6px;
         drop-shadow-color: #00000044;
         tip-text := Text {
             horizontal-alignment: Theme.rtl ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
             text: @tr("Hide next to the clock");
-            color: Theme.text;
+            color: root.is-hud ? #FFFFFF : #0f172a;
         }
     }
     // a corner to make the window bigger
@@ -2991,7 +3182,7 @@ export component DetailsDialog inherits ThemedWindow {
         Path {
             viewbox-width: 10;
             viewbox-height: 10;
-            stroke: Theme.muted;
+            stroke: root.is-hud ? HudPalette.icon-tint : #526277;
             stroke-width: 1px;
             commands: "M 9 3 L 3 9 M 9 6 L 6 9";
         }

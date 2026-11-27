@@ -691,9 +691,27 @@ fn wire_main(ui: &Ui) {
         let ui = ui.clone();
         main.on_set_theme(move |m| {
             let mut s = ui.ctx.mgr.settings();
-            s.theme = m.clamp(0, 8) as u32;
+            let prev_hud = s.progress_theme;
+            s.theme = m.clamp(0, 10) as u32;
+            if m == 9 {
+                s.progress_theme = 1;
+            } else if m == 10 {
+                s.progress_theme = 2;
+            } else if m == 0 {
+                s.progress_theme = 0;
+            }
+            let new_hud = s.progress_theme;
             let _ = ui.ctx.mgr.set_settings(s);
             apply_theme(&ui, m);
+            if prev_hud != new_hud {
+                resize_progress_windows_for_theme(&ui, new_hud as i32);
+            }
+        });
+    }
+    {
+        let ui = ui.clone();
+        main.on_set_hud_theme(move |h| {
+            set_hud_theme(&ui, h);
         });
     }
     {
@@ -1750,6 +1768,7 @@ pub(crate) const FONTS: [&str; 7] = ["", "Tahoma", "Arial", "Calibri", "Verdana"
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Look {
     pub mode: i32,
+    pub progress_theme: i32,
     /// 0.8 ..= 1.5
     pub scale: f32,
     pub family: String,
@@ -1762,7 +1781,8 @@ pub(crate) struct Look {
 impl Look {
     pub(crate) fn of(s: &Settings) -> Look {
         Look {
-            mode: s.theme.min(8) as i32,
+            mode: s.theme.min(10) as i32,
+            progress_theme: s.progress_theme.min(2) as i32,
             scale: s.font_scale.clamp(80, 150) as f32 / 100.0,
             family: if FONTS.contains(&s.font_family.as_str()) { s.font_family.clone() } else { String::new() },
             background: s.background_image.clone(),
@@ -1795,13 +1815,41 @@ fn background_image(path: &str) -> Option<slint::Image> {
 /// Set the theme on every open window (each window has its own copy).
 pub(crate) fn apply_theme(ui: &Ui, mode: i32) {
     let mut look = Look::of(&ui.ctx.mgr.settings());
-    look.mode = mode;
+    look.mode = mode.clamp(0, 10);
     apply_look(ui, &look);
+}
+
+/// Switch between the 3 UI themes (0 Classic, 1 Cyber Purple, 2 Neon Blue) and persist immediately.
+pub(crate) fn set_hud_theme(ui: &Ui, hud: i32) {
+    let hud = hud.clamp(0, 2);
+    let mut s = ui.ctx.mgr.settings();
+    s.progress_theme = hud as u32;
+    s.theme = match hud {
+        1 => 9,
+        2 => 10,
+        _ => 0,
+    };
+    let _ = ui.ctx.mgr.set_settings(s.clone());
+    apply_look(ui, &Look::of(&s));
+    resize_progress_windows_for_theme(ui, hud);
+}
+
+fn resize_progress_windows_for_theme(ui: &Ui, hud: i32) {
+    let map = ui.progress.clone();
+    slint::Timer::single_shot(Duration::from_millis(1), move || {
+        let target_w = if hud > 0 { 760.0f32 } else { 560.0f32 };
+        let min_h = if hud > 0 { 335.0f32 } else { 260.0f32 };
+        for (d, _) in map.borrow().values() {
+            let h = d.get_content_height().max(min_h);
+            d.window().set_size(slint::LogicalSize::new(target_w, h));
+        }
+    });
 }
 
 fn set_theme_of(t: Theme<'_>, look: &Look) {
     t.set_rtl(i18n::is_rtl());
     t.set_mode(look.mode);
+    t.set_hud_theme(look.progress_theme);
     t.set_font_scale(look.scale);
     t.set_font_family(look.family.clone().into());
 }
@@ -2952,23 +3000,45 @@ pub(crate) fn open_progress(ui: &Ui, id: u64) {
     }
     {
         // "Hide details": the window gets small; "Show details": back to
-        // the height it had
-        let (w, tall) = (d.as_weak(), Rc::new(Cell::new(0f32)));
+        // the height it had (recalculated cleanly if theme switched meanwhile)
+        let (w, tall, tall_hud) = (d.as_weak(), Rc::new(Cell::new(0f32)), Rc::new(Cell::new(-1i32)));
         d.on_details_toggled(move || {
-            let (w, tall) = (w.clone(), tall.clone());
+            let (w, tall, tall_hud) = (w.clone(), tall.clone(), tall_hud.clone());
             slint::Timer::single_shot(Duration::from_millis(1), move || {
                 let Some(d) = w.upgrade() else { return };
                 let scale = d.window().scale_factor();
                 let now = d.window().size().to_logical(scale);
+                let cur_hud = d.global::<Theme>().get_hud_theme();
                 let height = if d.get_show_details() {
-                    let before = tall.get();
-                    if before > 0.0 { before } else { now.height.max(d.get_content_height()) }
+                    let before = if tall_hud.get() == cur_hud { tall.get() } else { 0.0 };
+                    if before > 0.0 { before.max(d.get_content_height()) } else { d.get_content_height() }
                 } else {
                     tall.set(now.height);
+                    tall_hud.set(cur_hud);
                     d.get_content_height()
                 };
                 d.window().set_size(slint::LogicalSize::new(now.width, height.max(120.0)));
             });
+        });
+    }
+    {
+        let ui2 = ui.clone();
+        d.on_select_hud_theme(move |h| {
+            set_hud_theme(&ui2, h);
+        });
+    }
+    {
+        let mgr = ui.ctx.mgr.clone();
+        d.on_open_folder(move || {
+            if let Some(v) = mgr.get(id) {
+                reveal_in_folder(&v);
+            }
+        });
+    }
+    {
+        let ui2 = ui.clone();
+        d.on_play_preview(move || {
+            play_while_downloading(&ui2, id);
         });
     }
     {
@@ -3005,6 +3075,9 @@ pub(crate) fn open_progress(ui: &Ui, id: u64) {
     let segs = Rc::new(VecModel::<SegView>::default());
     d.set_segs(ModelRc::from(segs.clone()));
     fill_details(&d, &segs, &v);
+    let init_w = if settings.progress_theme.min(2) > 0 { 760.0f32 } else { 560.0f32 };
+    let init_h = d.get_content_height().max(if settings.progress_theme.min(2) > 0 { 510.0 } else { 400.0 });
+    d.window().set_size(slint::LogicalSize::new(init_w, init_h));
     open_window!(d);
     ui.progress.borrow_mut().insert(id, (d, segs));
 }
@@ -3090,6 +3163,8 @@ fn fill_details(d: &DetailsDialog, model: &VecModel<SegView>, v: &DownloadView) 
     d.set_name(v.file_name.clone().into());
     d.set_kind(if v.kind == DownloadKind::Torrent { "torrent" } else { kind_for(&v.file_name) }.into());
     d.set_percent(format!("{:.0}%", pct * 100.0).into());
+    d.set_percent_precise(format!("{:.2}%", pct * 100.0).into());
+    d.set_app_version(env!("CARGO_PKG_VERSION").into());
     d.set_url(v.url.clone().into());
     let status = match v.status {
         _ if v.waiting => t("No internet connection - it will continue by itself when it is back…"),
@@ -3099,11 +3174,24 @@ fn fill_details(d: &DetailsDialog, model: &VecModel<SegView>, v: &DownloadView) 
         other => t(other.label()),
     };
     d.set_status(status.into());
-    d.set_size(v.total_size.map(fmt_size).unwrap_or_else(|| t("Unknown")).into());
-    let done = if v.parts_total > 0 && v.total_size.is_none() {
-        format!("{} ({}/{} parts)", fmt_size(v.downloaded), v.parts_done, v.parts_total)
+    let (conn_status, conn_online) = if v.waiting {
+        (t("Waiting"), false)
+    } else if v.status == Status::Failed {
+        (t("Error"), false)
+    } else if v.status.is_running() {
+        ("Fast".to_string(), true)
     } else {
-        format!("{} ({:.2} %)", fmt_size(v.downloaded), pct * 100.0)
+        ("Ready".to_string(), true)
+    };
+    d.set_conn_status(conn_status.into());
+    d.set_conn_online(conn_online);
+    d.set_size(v.total_size.map(fmt_size).unwrap_or_else(|| t("Unknown")).into());
+    let short_done = fmt_size(v.downloaded);
+    d.set_downloaded_short(short_done.clone().into());
+    let done = if v.parts_total > 0 && v.total_size.is_none() {
+        format!("{} ({}/{} parts)", short_done, v.parts_done, v.parts_total)
+    } else {
+        format!("{} ({:.2} %)", short_done, pct * 100.0)
     };
     d.set_downloaded(done.into());
     let speed = if v.speed > 0.0 { format!("{}/s", fmt_size(v.speed as u64)) } else { "—".into() };
@@ -3131,6 +3219,8 @@ fn fill_details(d: &DetailsDialog, model: &VecModel<SegView>, v: &DownloadView) 
         segs.iter()
             .enumerate()
             .map(|(i, (start, pos, end, active))| SegView {
+                idx: i as i32,
+                finished: pos >= end,
                 start: *start as f32 / base as f32,
                 done: *pos as f32 / base as f32,
                 number: (i + 1).to_string().into(),
